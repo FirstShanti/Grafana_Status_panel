@@ -32,7 +32,9 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 				configurable: true
 			}
 		});
-		if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass;
+		if (superClass) {
+			Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass;
+		}
 	}
 
 	return {
@@ -56,14 +58,20 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 						var descriptor = props[i];
 						descriptor.enumerable = descriptor.enumerable || false;
 						descriptor.configurable = true;
-						if ("value" in descriptor) descriptor.writable = true;
+						if ("value" in descriptor) {
+							descriptor.writable = true;
+						}
 						Object.defineProperty(target, descriptor.key, descriptor);
 					}
 				}
 
 				return function (Constructor, protoProps, staticProps) {
-					if (protoProps) defineProperties(Constructor.prototype, protoProps);
-					if (staticProps) defineProperties(Constructor, staticProps);
+					if (protoProps) {
+						defineProperties(Constructor.prototype, protoProps);
+					}
+					if (staticProps) {
+						defineProperties(Constructor, staticProps);
+					}
 					return Constructor;
 				};
 			}();
@@ -73,6 +81,7 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 				flipTime: 5,
 				panelShape: 'Rectangle',
 				colorMode: 'Panel',
+				iconSwitch: false,
 				// Changed colors to match Table Panel so colorised text is easier to read
 				colors: {
 					crit: 'rgba(245, 54, 54, 0.9)',
@@ -120,12 +129,17 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 					// Dates get stored as strings and will need to be converted back to a Date objects
 					_.each(_this.panel.targets, function (t) {
 						if (t.valueHandler === "Date Threshold") {
-							if (typeof t.crit != "undefined") t.crit = new Date(t.crit);
-							if (typeof t.warn != "undefined") t.warn = new Date(t.warn);
+							if (typeof t.crit != "undefined") {
+								t.crit = new Date(t.crit);
+							}
+							if (typeof t.warn != "undefined") {
+								t.warn = new Date(t.warn);
+							}
 						}
 					});
 
 					_this.panel.flipTime = _this.panel.flipTime || 5;
+					_this.panel.iconSwitch = _this.panel.iconSwitch || false;
 
 					/** Bind events to functions **/
 					_this.events.on('render', _this.onRender.bind(_this));
@@ -262,7 +276,9 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 					value: function setTextMaxWidth() {
 						var tail = ' …';
 						var panelWidth = this.$panelContainer.innerWidth();
-						if (isNaN(panelWidth)) panelWidth = parseInt(panelWidth.slice(0, -2), 10) / 12;
+						if (isNaN(panelWidth)) {
+							panelWidth = parseInt(panelWidth.slice(0, -2), 10) / 12;
+						}
 						panelWidth = panelWidth - 20;
 						this.maxWidth = panelWidth;
 					}
@@ -281,12 +297,17 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 					key: "onHandlerChange",
 					value: function onHandlerChange(measurement) {
 						// If the Threshold type changes between Number/String/Date then try and recast the thresholds to keep consistent
+						console.log('measurement: ', measurement)
 						if (measurement.valueHandler === "Number Threshold") {
 							measurement.crit = isNaN(Number(measurement.crit)) ? undefined : Number(measurement.crit);
 							measurement.warn = isNaN(Number(measurement.warn)) ? undefined : Number(measurement.warn);
 						} else if (measurement.valueHandler === "String Threshold") {
-							if (typeof measurement.crit != "undefined") measurement.crit = String(measurement.crit);
-							if (typeof measurement.warn != "undefined") measurement.warn = String(measurement.warn);
+							if (typeof measurement.crit != "undefined") {
+								measurement.crit = String(measurement.crit);
+							}
+							if (typeof measurement.warn != "undefined") {
+								measurement.warn = String(measurement.warn);
+							}
 						} else if (measurement.valueHandler === "Date Threshold") {
 							var c = new Date(measurement.crit),
 							    w = new Date(measurement.warn);
@@ -440,6 +461,7 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 						}
 
 						this.autoFlip();
+						this.iconSwitch()
 						this.updatePanelState();
 						this.handleCssDisplay();
 						this.parseUri();
@@ -486,8 +508,12 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 									target.warn = Number(target.warn);
 								} else {
 									target.valueHandler = "String Threshold";
-									if (typeof target.crit != "undefined") target.crit = String(target.crit);
-									if (typeof target.warn != "undefined") target.warn = String(target.warn);
+									if (typeof target.crit != "undefined") {
+										target.crit = String(target.crit);
+									}
+									if (typeof target.warn != "undefined") {
+										target.warn = String(target.warn);
+									}
 								}
 							}
 						});
@@ -497,7 +523,8 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 					value: function handleThresholdStatus(series, target) {
 						series.thresholds = StatusPluginCtrl.parseThresholds(target);
 						series.inverted = series.thresholds.crit < series.thresholds.warn;
-
+						console.log('series: ', series)
+						console.log('target: ', target)
 						var isCritical = false;
 						var isWarning = false;
 						var isStatus = false;
@@ -531,9 +558,9 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 								isWarning = true;
 							}
 						}
-
 						// Add units-of-measure and decimal formatting or date formatting as needed
 						series.display_value = this.formatDisplayValue(series.display_value, target);
+						series.display_icon = this.getThresholdIcon(target)
 
 						var displayValueWhenAliasDisplayed = 'When Alias Displayed' === target.displayValueWithAlias;
 						var displayValueFromWarning = 'Warning / Critical' === target.displayValueWithAlias;
@@ -575,6 +602,17 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 						}
 					}
 				}, {
+					key: "getThresholdIcon",
+					value: function getThresholdIcon(target) {
+						if (target.warn_icon) {
+							return target.warn_icon
+						} else if (target.crit_icon) {
+							return target.crit_icon
+						} else {
+							return null
+						}
+					}
+				}, {
 					key: "formatDisplayValue",
 					value: function formatDisplayValue(value, target) {
 						// Format the display value. Set to "Invalid" if value is out-of-bounds or a type mismatch with the handler
@@ -589,11 +627,15 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 								value = "Invalid Number";
 							}
 						} else if (target.valueHandler === "String Threshold") {
-							if (value === undefined || value === null || value !== value) value = "Invalid String";
+							if (value === undefined || value === null || value !== value) {
+								value = "Invalid String";
+							}
 						} else if (target.valueHandler === "Date Threshold") {
 							if (_.isFinite(value)) {
 								var date = moment(new Date(value));
-								if (this.dashboard.isTimezoneUtc()) date = date.utc();
+								if (this.dashboard.isTimezoneUtc()) {
+									date = date.utc();
+								}
 								value = date.format(target.dateFormat);
 							} else {
 								value = "Invalid Date";
@@ -788,7 +830,9 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 					value: function autoFlip() {
 						var _this8 = this;
 
-						if (this.timeoutId) clearInterval(this.timeoutId);
+						if (this.timeoutId) {
+							clearInterval(this.timeoutId);
+						}
 						if (this.panel.flipCard && (this.crit.length > 0 || this.warn.length > 0 || this.disabled.length > 0)) {
 							this.timeoutId = setInterval(function () {
 								_this8.$panelContainer.toggleClass("flipped");
@@ -796,9 +840,19 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 						}
 					}
 				}, {
+					key: "iconSwitch",
+					value: function iconSwitch() {
+						var _this8 = this;
+						if (this.panel.iconSwitch) {
+							_this8.$panelContainer.find('img.icons').addClass('icons-on');
+						} else {
+							_this8.$panelContainer.find('img.icons').removeClass('icons-on');
+						}
+					}
+				}, {
 					key: "link",
 					value: function link(scope, elem, attrs, ctrl) {
-						this.$panelContainer = elem.find('.panel-container');
+						this.$panelContainer = elem;
 						this.$panelContainer.addClass("st-card");
 						this.$panelContoller = ctrl;
 					}
@@ -848,7 +902,7 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 							res.warn = metricOptions.warn;
 							res.warnIsNumber = false;
 						}
-
+						// console.log('metric option: ', metricOptions)
 						if (StatusPluginCtrl.isFloat(metricOptions.crit)) {
 							res.crit = parseFloat(metricOptions.crit);
 							res.critIsNumber = true;
@@ -859,7 +913,7 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 							res.crit = metricOptions.crit;
 							res.critIsNumber = false;
 						}
-
+						// console.log('parseThresholds res: ', res)
 						return res;
 					}
 				}, {
@@ -882,6 +936,11 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 
 						return series;
 					}
+				}, {
+					key: "iconUrlHandler",
+					value: function iconUrlHandler(target) {
+
+					}
 				}]);
 
 				return StatusPluginCtrl;
@@ -894,3 +953,4 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 	};
 });
 //# sourceMappingURL=status_ctrl.js.map
+

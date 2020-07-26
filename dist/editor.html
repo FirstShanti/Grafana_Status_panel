@@ -50,6 +50,15 @@
 		</div>
 	</div>
 
+	<!--Icon on/off -->
+	<div class="section gf-form-group">
+		<h5 class="section-heading">Icon Options</h5>
+		<gf-form-switch class="gf-form"
+						label-class="width-12"
+						label="Icon switch" checked="ctrl.panel.iconSwitch"
+						on-change="ctrl.onRender()"></gf-form-switch>
+	</div>
+
 	<!--Flip card section-->
 	<div class="section gf-form-group">
 		<h5 class="section-heading">Flip Options</h5>
@@ -114,6 +123,7 @@
 				<color-picker color="ctrl.panel.colors.disable" bs-tooltip="'Disabled'" onChange="ctrl.onColorChange('disable')"></color-picker>
 			</span>
 		</div>
+
 	</div>
 
 	<!--Other Option-->
@@ -361,6 +371,10 @@
 						   name="warn" ng-model="measurement.warn" class="gf-form-input max-width-14" ng-change="ctrl.onRender()" required />
 					<input type="datetime-local" ng-if="measurement.valueHandler == 'Date Threshold'"
 						   name="warn" ng-model="measurement.warn" class="gf-form-input max-width-14" ng-change="ctrl.onRender()" required />
+					<span class="gf-form-label width-3">
+					  icon
+					</span>
+					<input type="text" name="icon-warn" ng-model="measurement.warn_icon" class="gf-form-input max-width-14" ng-change="ctrl.onRender()" required />	   
 				</div>
 
 				<!--Critical threshold-->
@@ -374,6 +388,10 @@
 						   name="crit" ng-model="measurement.crit" class="gf-form-input max-width-14" ng-change="ctrl.onRender()" required />
 					<input type="datetime-local" ng-if="measurement.valueHandler == 'Date Threshold'"
 						   name="crit" ng-model="measurement.crit" class="gf-form-input max-width-14" ng-change="ctrl.onRender()" required />
+				   	<span class="gf-form-label width-3">
+					  icon
+					</span>
+					<input type="text" name="icon-warn" ng-model="measurement.crit_icon" class="gf-form-input max-width-14" ng-change="ctrl.onRender()" required />	   
 				</div>
 
 				<!--Display Value Type-->

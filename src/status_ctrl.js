@@ -15,6 +15,7 @@ const panelDefaults = {
 	flipTime: 5,
 	panelShape: 'Rectangle',
 	colorMode: 'Panel',
+	iconSwitch: false,
 	// Changed colors to match Table Panel so colorised text is easier to read
 	colors: {
 		crit: 'rgba(245, 54, 54, 0.9)',
@@ -63,6 +64,7 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 		});
 
 		this.panel.flipTime = this.panel.flipTime || 5;
+		this.panel.iconSwitch = this.panel.iconSwitch || false;
 
 		/** Bind events to functions **/
 		this.events.on('render', this.onRender.bind(this));
@@ -186,8 +188,9 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 	setTextMaxWidth() {
 		let tail = ' …';
 		let panelWidth = this.$panelContainer.innerWidth();
-		if (isNaN(panelWidth))
+		if (isNaN(panelWidth)) {
 			panelWidth = parseInt(panelWidth.slice(0, -2), 10) / 12;
+		}
 		panelWidth = panelWidth - 20;
 		this.maxWidth = panelWidth;
 	}
@@ -356,6 +359,7 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 		}
 
 		this.autoFlip();
+		this.iconSwitch();
 		this.updatePanelState();
 		this.handleCssDisplay();
 		this.parseUri();
@@ -370,7 +374,7 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 		//Handle legacy code
 		_.each(targets, (target) => {
 			if(target.valueHandler == null) {
-				if(target.displayType != null) {
+				if (target.displayType != null) {
 					target.valueHandler = target.displayType;
 					if (target.valueHandler == "Annotation") {
 						target.valueHandler = "Text Only"
@@ -381,11 +385,10 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 				target.displayType = this.displayTypes[0];
 			}
 
-			if(target.display != null){
+			if (target.display != null) {
 				target.displayAliasType = target.display ? "Always" : this.displayAliasTypes[0];
 				target.displayValueWithAlias = target.display ? 'When Alias Displayed' : this.displayValueTypes[0];
 				delete target.display;
-
 			}
 		});
 
@@ -395,13 +398,17 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 				// Use the same logic as Threshold Parsing to ensure we retain same behaviour
 				// i.e. map to Number Threshold if two floats (i.e. range check) otherwise map to String Threshold (i.e. exact match)
 				if (StatusPluginCtrl.isFloat(target.crit) && StatusPluginCtrl.isFloat(target.warn)) {
-					target.valueHandler = "Number Threshold"
+					target.valueHandler = "Number Threshold";
 					target.crit = Number(target.crit);
 					target.warn = Number(target.warn);
 				} else {
 					target.valueHandler = "String Threshold";
-					if (typeof target.crit != "undefined") target.crit = String(target.crit);
-					if (typeof target.warn != "undefined") target.warn = String(target.warn);
+					if (typeof target.crit != "undefined") {
+						target.crit = String(target.crit);
+					}
+					if (typeof target.warn != "undefined") {
+						target.warn = String(target.warn);
+					}
 				}
 			}
 		});
@@ -447,6 +454,7 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 
 		// Add units-of-measure and decimal formatting or date formatting as needed
 		series.display_value = this.formatDisplayValue(series.display_value, target);
+		series.display_icon = this.getThresholdIcon(target)
 
 		let displayValueWhenAliasDisplayed = 'When Alias Displayed' === target.displayValueWithAlias;
 		let displayValueFromWarning = 'Warning / Critical' === target.displayValueWithAlias;
@@ -504,8 +512,9 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 				value = "Invalid Number";
 			}
 		} else if (target.valueHandler === "String Threshold") {
-			if (value === undefined || value === null || value !== value)
+			if (value === undefined || value === null || value !== value) {
 				value = "Invalid String";
+			}
 		} else if (target.valueHandler === "Date Threshold") {
 			if (_.isFinite(value)) {
 				let date = moment(new Date(value));
@@ -725,11 +734,15 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 	}
 
 	$onDestroy() {
-		if(this.timeoutId) clearInterval(this.timeoutId);
+		if (this.timeoutId) {
+			clearInterval(this.timeoutId);
+		}
 	}
 
 	autoFlip() {
-		if (this.timeoutId) clearInterval(this.timeoutId);
+		if (this.timeoutId) {
+			clearInterval(this.timeoutId);
+		}
 		if (this.panel.flipCard && (this.crit.length > 0 || this.warn.length > 0 || this.disabled.length > 0)) {
 			this.timeoutId = setInterval(() => {
 				this.$panelContainer.toggleClass("flipped");
@@ -738,20 +751,20 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 	}
 
 	link(scope, elem, attrs, ctrl) {
-		this.$panelContainer = elem.find('.panel-container');
+		this.$panelContainer = elem;
 		this.$panelContainer.addClass("st-card");
 		this.$panelContoller = ctrl;
 	}
 
 	addGroup(){
-		if(this.panel.groupname){
+		if (this.panel.groupname) {
 			var duplicate = false;
 			this.panel.statusGroups.forEach(element => {
 				if(element.name === this.panel.groupname){
 					duplicate = true;
 				}
 			});
-			if(!duplicate){
+			if (!duplicate) {
 				this.panel.statusGroups.push({name: this.panel.groupname, alias: '', url: ''});
 				this.panel.groupname = '';
 			}
