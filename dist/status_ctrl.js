@@ -116,7 +116,7 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 					_this.displayTypes = ['Regular', 'Annotation'];
 					_this.displayAliasTypes = ['Warning / Critical / Error', 'Always'];
 					_this.displayValueTypes = ['Never', 'When Alias Displayed', 'Warning / Critical / Error', 'Critical Only', 'Error only'];
-					_this.displayTags = ['none', '+/-', 'UP/DOWN', 'TRENDING/FALLING'];
+					// _this.displayTags = ['none', '+/-', 'UP/DOWN', 'TRENDING/FALLING'];
 					_this.displayTagsType = ['Line', 'Metric'];
 					_this.colorModes = ['Panel', 'Metric', 'Disabled'];
 					_this.fontFormats = ['Regular', 'Bold', 'Italic'];
@@ -593,9 +593,12 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 						series.display_value = this.formatDisplayValue(series.display_value, target);
 						series.display_icon = this.getThresholdIcon(target);
 						
-						[series.error_tag, series.error_tags, series.error_tags_type] = this.getTag(series.display_value, target.error_tags, target.error_tags_type);
-						[series.crit_tag, series.crit_tags, series.crit_tags_type] = this.getTag(series.display_value, target.crit_tags, target.crit_tags_type);
-						[series.warn_tag, series.warn_tags, series.warn_tags_type] = this.getTag(series.display_value, target.warn_tags, target.warn_tags_type);
+						// [series.error_tag, series.error_tags_type] = this.getTag(series.display_value, target.error_tag, target.error_tags_type);
+						// [series.crit_tag, series.crit_tags_type] = this.getTag(series.display_value, target.crit_tag, target.crit_tags_type);
+						// [series.warn_tag, series.warn_tags_type] = this.getTag(series.display_value, target.warn_tag, target.warn_tags_type);
+						[series.error_tag, series.error_tags_type] = [target.error_tag, target.error_tags_type];
+						[series.crit_tag, series.crit_tags_type] = [target.crit_tag, target.crit_tags_type];
+						[series.warn_tag, series.warn_tags_type] = [target.warn_tag, target.warn_tags_type];
 						
 						var displayValueWhenAliasDisplayed = 'When Alias Displayed' === target.displayValueWithAlias;
 						var displayValueFromWarning = 'Warning / Critical / Error' === target.displayValueWithAlias;
@@ -655,7 +658,7 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 					}
 				}, {
 					key: "getTag",
-					value: function getTag(value, displayTags, displayTagsType) {
+					value: function getTag(value, displayTag, displayTagsType) {
 						// series.displayTagsType, series.displayTagsPosition
 						console.log(value, displayTags, displayTagsType)
 						if (displayTags === '+/-') {

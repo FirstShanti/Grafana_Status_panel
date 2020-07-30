@@ -78,8 +78,8 @@
 
 					<div ng-style="ctrl.panel.colorMode === 'Metric' && {'color':ctrl.panel.colors.error}"
 						ng-class="{'boldAlertMetric': ctrl.panel.fontFormat === 'Bold', 'italicAlertMetric': ctrl.panel.fontFormat === 'Italic'}" ng-repeat="(group, metrics) in ctrl.groupError">
-						<img ng-if="ctrl.panel.iconSwitch && metrics[0].display_icon || metrics[0].error_tags_type === 'Line' && !metrics[0].error_tag" ng-show="metrics[0].display_icon" alt="error" src="{{metrics[0].display_icon}}">
-						<img ng-if="ctrl.panel.iconSwitch && !metrics[0].display_icon && metrics.length && !metrics[0].error_tags_type" src="https://icons.iconarchive.com/icons/paomedia/small-n-flat/24/sign-error-icon.png">
+						<img ng-if="ctrl.panel.iconSwitch && metrics[0].display_icon && ((metrics[0].error_tags_type == 'Metric' || !metrics[0].error_tag) || (metrics[0].error_tags_type == 'Line' && !metrics[0].error_tag))" ng-show="metrics[0].display_icon" alt="error" src="{{metrics[0].display_icon}}">
+						<img ng-if="ctrl.panel.iconSwitch && !metrics[0].display_icon && metrics.length && ((metrics[0].error_tags_type == 'Metric' || !metrics[0].error_tag) || (metrics[0].error_tags_type == 'Line' && !metrics[0].error_tag))" src="https://icons.iconarchive.com/icons/paomedia/small-n-flat/24/sign-error-icon.png">
 						<span ng-if="metrics[0].error_tag && metrics[0].error_tags_type === 'Line'" ng-show="metrics[0].error_tag">{{ metrics[0].error_tag }}</span>
 						<a ng-if="metrics.length > 0 && metrics[0].group.url && metrics[0].group.alias" ng-href="{{ metrics[0].group.url | interpolateTemplateVars:this }}" target="_blank" >{{ ctrl.formatAlias(metrics[0].group.alias, metrics.length, 'error') }}</a>
 						<a ng-if="metrics.length > 0 && !metrics[0].group.url && metrics[0].group.alias" ng-href="{{ ctrl.error[0].url | interpolateTemplateVars:this }}" target="_blank" >{{ ctrl.formatAlias(metrics[0].group.alias, metrics.length, 'error') }}</a>
@@ -91,8 +91,8 @@
 
 					<div ng-style="ctrl.panel.colorMode === 'Metric' && {'color':ctrl.panel.colors.crit}"
 						ng-class="{'boldAlertMetric': ctrl.panel.fontFormat === 'Bold', 'italicAlertMetric': ctrl.panel.fontFormat === 'Italic'}" ng-repeat="(group, metrics) in ctrl.groupCrit">
-						<img ng-if="ctrl.panel.iconSwitch && metrics[0].display_icon || metrics[0].crit_tags_type === 'Line' && !metrics[0].crit_tag" ng-show="metrics[0].display_icon" alt="crit" src="{{metrics[0].display_icon}}">
-						<img ng-if="ctrl.panel.iconSwitch && !metrics[0].display_icon && metrics.length && !metrics[0].crit_tags_type" src="https://icons.iconarchive.com/icons/custom-icon-design/flatastic-9/24/Warning-icon.png">
+						<img ng-if="ctrl.panel.iconSwitch && metrics[0].display_icon && ((metrics[0].crit_tags_type == 'Metric' || !metrics[0].crit_tag) || (metrics[0].crit_tags_type == 'Line' && !metrics[0].crit_tag))" ng-show="metrics[0].display_icon" alt="crit" src="{{metrics[0].display_icon}}">
+						<img ng-if="ctrl.panel.iconSwitch && !metrics[0].display_icon && metrics.length && ((metrics[0].crit_tags_type == 'Metric' || !metrics[0].crit_tag) || (metrics[0].crit_tags_type == 'Line' && !metrics[0].crit_tag))" src="https://icons.iconarchive.com/icons/custom-icon-design/flatastic-9/24/Warning-icon.png">
 						<span ng-if="metrics[0].crit_tag && metrics[0].crit_tags_type === 'Line'" ng-show="metrics[0].crit_tag">{{ metrics[0].crit_tag }}</span>
 						<!-- <img ng-if="metrics[0].display_icon" ng-show="metrics[0].display_icon" alt="critical" src="{{metrics[0].display_icon}}" />
 						<img ng-if="!metrics[0].display_icon && metrics.length" ng-show="!metrics[0].display_icon" src='https://hds.static.autodesk.com/images/table-status-worst.svg' > -->
@@ -106,8 +106,8 @@
 					   
 					<div ng-style="ctrl.panel.colorMode === 'Metric' && {'color':ctrl.panel.colors.warn}"
 						ng-class="{'boldAlertMetric': ctrl.panel.fontFormat === 'Bold', 'italicAlertMetric': ctrl.panel.fontFormat === 'Italic'}" ng-repeat="(group, metrics) in ctrl.groupWarn">
-						<img ng-if="ctrl.panel.iconSwitch && metrics[0].display_icon || metrics[0].warn_tags_type === 'Line' && !metrics[0].warn_tag" ng-show="metrics[0].display_icon" alt="warn" src="{{metrics[0].display_icon}}">
-						<img ng-if="ctrl.panel.iconSwitch && !metrics[0].display_icon && metrics.length && !metrics[0].warn_tags_type" src="https://hds.static.autodesk.com/images/table-status-bad.svg">
+						<img ng-if="ctrl.panel.iconSwitch && metrics[0].display_icon && ((metrics[0].warn_tags_type == 'Metric' || !metrics[0].warn_tag) || (metrics[0].warn_tags_type == 'Line' && !metrics[0].warn_tag))" ng-show="metrics[0].display_icon" alt="warn" src="{{metrics[0].display_icon}}">
+						<img ng-if="ctrl.panel.iconSwitch && !metrics[0].display_icon && metrics.length && ((metrics[0].warn_tags_type == 'Metric' || !metrics[0].warn_tag) || (metrics[0].warn_tags_type == 'Line' && !metrics[0].warn_tag))" src="https://hds.static.autodesk.com/images/table-status-bad.svg">
 						<span ng-if="metrics[0].warn_tag && metrics[0].warn_tags_type === 'Line'" ng-show="metrics[0].warn_tag">{{ metrics[0].warn_tag }}</span>
 						<!-- <img ng-if="metrics[0].display_icon" ng-show="metrics[0].display_icon" alt="warning" src="{{metrics[0].display_icon}}" /> 
 						<img ng-if="!metrics[0].diplay_icon && metrics.length" ng-show="!metrics[0].display_icon" src="https://hds.static.autodesk.com/images/table-status-bad.svg"> -->

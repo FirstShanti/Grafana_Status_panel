@@ -381,14 +381,7 @@
 				    <span class="gf-form-label width-3">
 					  tag
 					</span>
-					<div class="gf-form-select-wrapper max-width-8">
-						<select class="gf-form-input"
-								ng-init="measurement.warn_tags = (measurement.warn_tags ? measurement.warn_tags : ctrl.displayTags[0])"
-								ng-model="measurement.warn_tags"
-								ng-options="t for t in ctrl.displayTags"
-								ng-change="ctrl.onRender()"
-						></select>
-					</div>
+					<input class="gf-form-input max-width-8" type='text' ng-model="measurement.warn_tag" ng-change="ctrl.onRender()">
 					<div class="gf-form-select-wrapper max-width-7">
 						<select class="gf-form-input"
 								ng-init="measurement.warn_tags_type = (measurement.warn_tags_type ? measurement.warn_tags_type : ctrl.displayTagsType[0])"
@@ -417,14 +410,7 @@
 					<span class="gf-form-label width-3">
 					  tag
 					</span>
-					<div class="gf-form-select-wrapper max-width-8">
-						<select class="gf-form-input"
-								ng-init="measurement.crit_tags = (measurement.crit_tags ? measurement.crit_tags : ctrl.displayTags[0])"
-								ng-model="measurement.crit_tags"
-								ng-options="t for t in ctrl.displayTags"
-								ng-change="ctrl.onRender()"
-						></select>
-					</div> 
+					<input class="gf-form-input max-width-8" type='text' ng-model="measurement.crit_tag" ng-change="ctrl.onRender()">
 					<div class="gf-form-select-wrapper max-width-7">
 						<select class="gf-form-input"
 								ng-init="measurement.crit_tags_type = (measurement.crit_tags_type ? measurement.crit_tags_type : ctrl.displayTagsType[0])"
@@ -453,14 +439,7 @@
 					<span class="gf-form-label width-3">
 					  tag
 					</span>
-					<div class="gf-form-select-wrapper max-width-8">
-						<select class="gf-form-input"
-								ng-init="measurement.error_tags = (measurement.error_tags ? measurement.error_tags : ctrl.displayTags[0])"
-								ng-model="measurement.error_tags"
-								ng-options="t for t in ctrl.displayTags"
-								ng-change="ctrl.onRender()"
-						></select>
-					</div>
+					<input class="gf-form-input max-width-8" type='text' ng-model="measurement.error_tag" ng-change="ctrl.onRender()">
 					<div class="gf-form-select-wrapper max-width-7">
 						<select class="gf-form-input"
 								ng-init="measurement.error_tags_type = (measurement.error_tags_type ? measurement.error_tags_type : ctrl.displayTagsType[0])"
