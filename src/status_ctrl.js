@@ -18,8 +18,9 @@ const panelDefaults = {
 	iconSwitch: false,
 	// Changed colors to match Table Panel so colorised text is easier to read
 	colors: {
-		crit: 'rgba(245, 54, 54, 0.9)',
-		warn: 'rgba(237, 129, 40, 0.9)',
+		error: 'rgba(255, 0, 0, 0.9)',
+		crit: 'rgba(255, 125, 0, 0.9)',
+		warn: 'rgba(250, 255, 0, 0.9)',
 		ok: 'rgba(50, 128, 45, 0.9)',
 		disable: 'rgba(128, 128, 128, 0.9)'
 	},
@@ -42,8 +43,10 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 		this.valueHandlers = ['Number Threshold', 'String Threshold', 'Date Threshold', 'Disable Criteria', 'Text Only'];
 		this.aggregations = ['Last', 'First', 'Max', 'Min', 'Sum', 'Avg', 'Delta'];
 		this.displayTypes = ['Regular', 'Annotation'];
-		this.displayAliasTypes = ['Warning / Critical', 'Always'];
-		this.displayValueTypes = ['Never', 'When Alias Displayed', 'Warning / Critical', 'Critical Only'];
+		this.displayAliasTypes = ['Warning / Critical / Error', 'Always'];
+		this.displayValueTypes = ['Never', 'When Alias Displayed', 'Warning / Critical / Error', 'Critical Only', 'Error only';
+		this.displayTags = ['+/-', 'UP/DOWN', 'TRENDING/FALLING'];
+		this.displayTagsType = ['Line', 'Metric'];
 		this.colorModes = ['Panel', 'Metric', 'Disabled'];
 		this.fontFormats = ['Regular', 'Bold', 'Italic'];
 		this.statusMetrics = [];
@@ -58,6 +61,7 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 		// Dates get stored as strings and will need to be converted back to a Date objects
 		_.each(this.panel.targets, (t) => {
 			if (t.valueHandler === "Date Threshold") {
+				if (typeof t.error != "undefined") t.error = new Date(t.error);
 				if (typeof t.crit != "undefined") t.crit = new Date(t.crit);
 				if (typeof t.warn != "undefined") t.warn = new Date(t.warn);
 			}
@@ -76,6 +80,7 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 
 		this.onColorChange = this.onColorChange.bind(this);
 
+		this.statusError = [];
 		this.statusCrit = [];
 		this.statusWarn = [];
 		this.statusMetric = null;
@@ -208,13 +213,16 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 	onHandlerChange(measurement) {
 		// If the Threshold type changes between Number/String/Date then try and recast the thresholds to keep consistent
 		if (measurement.valueHandler === "Number Threshold") {
+			measurement.error = (isNaN(Number(measurement.error))) ? undefined : Number(measurement.error);
 			measurement.crit = (isNaN(Number(measurement.crit))) ? undefined : Number(measurement.crit);
 			measurement.warn = (isNaN(Number(measurement.warn))) ? undefined : Number(measurement.warn);
 		} else if (measurement.valueHandler === "String Threshold") {
-			if (typeof measurement.crit != "undefined") measurement.crit = String(measurement.crit);
-			if (typeof measurement.warn != "undefined") measurement.warn = String(measurement.warn);
+			if (typeof measurement.error != "undefined") {measurement.error = String(measurement.error)}
+			if (typeof measurement.crit != "undefined") {measurement.crit = String(measurement.crit)}
+			if (typeof measurement.warn != "undefined") {measurement.warn = String(measurement.warn)}
 		} else if (measurement.valueHandler === "Date Threshold") {
-			let c = new Date(measurement.crit), w = new Date(measurement.warn);
+			let c = new Date(measurement.crit), w = new Date(measurement.warn), e = new Date(measurement.error);
+			measurement.error = (isNaN(e.getTime())) ? undefined : e;
 			measurement.crit = (isNaN(c.getTime())) ? undefined : c;
 			measurement.warn = (isNaN(w.getTime())) ? undefined : w;
 		}
@@ -236,6 +244,7 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 
 		if (this.panel.clusterName) {
 			this.panel.displayName =
+
 				this.filter('interpolateTemplateVars')(this.panel.clusterName, this.$scope)
 					.replace(new RegExp(this.panel.namePrefix, 'i'), '');
 		} else {
@@ -250,8 +259,10 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 
 		let targets = this.panel.targets;
 
+		this.error = [];
 		this.crit = [];
 		this.warn = [];
+		this.statusError = [];
 		this.statusCrit = [];
 		this.statusWarn = [];
 		this.disabled = [];
@@ -260,12 +271,14 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 		this.extraMoreAlerts = null;
 
 		this.statusMetrics = [];
+		this.groupError = {};
 		this.groupCrit = {};
 		this.groupWarn = {};
 
 		if(this.panel.statusGroups){
 			var statusGroupExists = false;
 			this.panel.statusGroups.forEach(element => {
+				this.groupError[element.name] = [];
 				this.groupCrit[element.name] = [];
 				this.groupWarn[element.name] = [];
 				if(element.name === 'Status Checks'){
@@ -350,16 +363,17 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 			// this.statusMetrics.push(s.alias)
 		});
 
-		if(this.panel.isHideAlertsOnDisable && this.disabled.length > 0) {
+		if (this.panel.isHideAlertsOnDisable && this.disabled.length > 0) {
+			this.error = [];
 			this.crit = [];
 			this.warn = [];
+			this.groupError = {};
 			this.groupCrit = {};
 			this.groupWarn = {};
 			this.display = [];
 		}
 
 		this.autoFlip();
-		this.iconSwitch();
 		this.updatePanelState();
 		this.handleCssDisplay();
 		this.parseUri();
@@ -397,12 +411,16 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 			if (target.valueHandler === "Threshold") {
 				// Use the same logic as Threshold Parsing to ensure we retain same behaviour
 				// i.e. map to Number Threshold if two floats (i.e. range check) otherwise map to String Threshold (i.e. exact match)
-				if (StatusPluginCtrl.isFloat(target.crit) && StatusPluginCtrl.isFloat(target.warn)) {
+				if (StatusPluginCtrl.isFloat(target.error) && StatusPluginCtrl.isFloat(target.crit) && StatusPluginCtrl.isFloat(target.warn)) {
 					target.valueHandler = "Number Threshold";
+					target.error = Number(target.error);
 					target.crit = Number(target.crit);
 					target.warn = Number(target.warn);
 				} else {
 					target.valueHandler = "String Threshold";
+					if (typeof target.error != "undefined") {
+						target.error = String(target.error);
+					}
 					if (typeof target.crit != "undefined") {
 						target.crit = String(target.crit);
 					}
@@ -416,14 +434,15 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 
 	handleThresholdStatus(series, target) {
 		series.thresholds = StatusPluginCtrl.parseThresholds(target);
-		series.inverted = series.thresholds.crit < series.thresholds.warn;
+		series.inverted = (series.thresholds.error < series.thresholds.crit) && (series.thresholds.crit < series.thresholds.warn);
 
+		let isError = false;
 		let isCritical = false;
 		let isWarning = false;
 		let isStatus = false;
-		let isCheckRanges = series.thresholds.warnIsNumber && series.thresholds.critIsNumber;
+		let isCheckRanges = series.thresholds.errorIsNumber && series.thresholds.warnIsNumber && series.thresholds.critIsNumber;
 
-		// alert(series.alias);
+		alert(series.alias);
 
 		if (series.hasOwnProperty('group') && series.group === this.panel.statusGroups[0]){
 			isStatus = true;
@@ -432,20 +451,26 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 
 		if (isCheckRanges) {
 			if (!series.inverted) {
-				if (series.display_value >= series.thresholds.crit) {
+				if (series.display_value >= series.thresholds.error) {
+					isError = true
+				} else if (series.display_value >= series.thresholds.crit  && series.alias) {
 					isCritical = true
 				} else if (series.display_value >= series.thresholds.warn) {
 					isWarning = true
 				}
 			} else {
-				if (series.display_value <= series.thresholds.crit && series.alias) {
+				if (series.display_value <= series.thresholds.error) {
+					isError = true
+				} else if (series.display_value <= series.thresholds.crit && series.alias) {
 					isCritical = true
 				} else if (series.display_value <= series.thresholds.warn) {
 					isWarning = true
 				}
 			}
 		} else {
-			if (series.display_value == series.thresholds.crit && series.alias) {
+			if (series.display_value == series.thresholds.error) {
+				isError = true
+			} else if (series.display_value == series.thresholds.crit && series.alias) {
 				isCritical = true
 			} else if (series.display_value == series.thresholds.warn) {
 				isWarning = true
@@ -456,11 +481,28 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 		series.display_value = this.formatDisplayValue(series.display_value, target);
 		series.display_icon = this.getThresholdIcon(target)
 
-		let displayValueWhenAliasDisplayed = 'When Alias Displayed' === target.displayValueWithAlias;
-		let displayValueFromWarning = 'Warning / Critical' === target.displayValueWithAlias;
-		let displayValueFromCritical = 'Critical Only' === target.displayValueWithAlias;
+		[series.error_tag, series.error_tags, series.error_tags_type] = this.getTag(series.display_value, target.error_tags, target.error_tags_type);
+		[series.crit_tag, series.crit_tags, series.crit_tags_type] = this.getTag(series.display_value, target.crit_tags, target.crit_tags_type);
+		[series.warn_tag, series.warn_tags, series.warn_tags_type] = this.getTag(series.display_value, target.warn_tags, target.warn_tags_type);
 
-		if(isCritical) {
+
+		var displayValueWhenAliasDisplayed = 'When Alias Displayed' === target.displayValueWithAlias;
+		var displayValueFromWarning = 'Warning / Critical / Error' === target.displayValueWithAlias;
+		var displayValueFromCritical = 'Critical Only' === target.displayValueWithAlias;
+		var displayValueFromError = 'Error Only' === target.displayValueWithAlias;
+
+		if (isError) {
+			series.displayType = this.displayTypes[0];
+			series.isDisplayValue = displayValueWhenAliasDisplayed || displayValueFromError || displayValueFromWarning;
+			if (isStatus) {
+				this.statusError.push(series);
+			} else {
+				this.error.push(series);
+				if (series.hasOwnProperty('group')) {
+					this.groupError[series.group.name].push(series);
+				}
+			}
+		} else if(isCritical) {
 			//In critical state we don't show the error as annotation
 			series.displayType = this.displayTypes[0];
 			series.isDisplayValue = displayValueWhenAliasDisplayed || displayValueFromWarning || displayValueFromCritical;
@@ -499,6 +541,18 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 		}
 	}
 
+	getTag(value, displayTags, displayTagsType) {
+		if (displayTags === '+/-') {
+			return [value > 0 ? '+':'-', displayTags, displayTagsType]
+		} else if (displayTags === 'UP/DOWN') {
+			return [value > 0 ? 'UP':'DOWN' , displayTags, displayTagsType]
+		} else if (displayTags === 'TRENDING/FALLING') {
+			return [value > 0 ? 'TRENDING':'FALLING', displayTags, displayTagsType]
+		} else {
+			return [null, null, null]
+		}
+	}
+	
 	formatDisplayValue(value, target) {
 		// Format the display value. Set to "Invalid" if value is out-of-bounds or a type mismatch with the handler
 		if (target.valueHandler === "Number Threshold") {
@@ -560,7 +614,7 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 			this.panelState = 'error-state';
 		} else if (this.disabled.length > 0) {
 			this.panelState = 'disabled-state';
-		} else if (this.statusCrit.length > 0) {
+		} else if (this.statusCrit.length > 0 || this.statusError.length > 0) {
 			this.panelState = 'error-state';
 		} else if (this.statusWarn.length > 0) {
 			this.panelState = 'warn-state';
@@ -628,7 +682,7 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 		if(this.panel.maxAlertNumber != null && this.panel.maxAlertNumber >= 0) {
 			let currentMaxAllowedAlerts = this.panel.maxAlertNumber;
 			let filteredOutAlerts = 0;
-			let arrayNamesToSlice = ["disabled", "crit", "warn", "display"];
+			let arrayNamesToSlice = ["disabled", , "error", "crit", "warn", "display"];
 			arrayNamesToSlice.forEach( arrayName => {
 				let originAlertCount = this[arrayName].length;
 				this[arrayName] = this[arrayName].slice(0,currentMaxAllowedAlerts);
@@ -688,7 +742,7 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 			res.warn = metricOptions.warn;
 			res.warnIsNumber = false;
 		}
-
+		// console.log('metric option: ', metricOptions)
 		if (StatusPluginCtrl.isFloat(metricOptions.crit)) {
 			res.crit = parseFloat(metricOptions.crit);
 			res.critIsNumber = true;
@@ -699,7 +753,17 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 			res.crit = metricOptions.crit;
 			res.critIsNumber = false;
 		}
-
+		if (StatusPluginCtrl.isFloat(metricOptions.error)) {
+			res.error = parseFloat(metricOptions.error);
+			res.errorIsNumber = true;
+		} else if (metricOptions.error instanceof Date) {
+			res.error = metricOptions.error.valueOf();
+			res.errorIsNumber = true;
+		} else {
+			res.error = metricOptions.error;
+			res.errorIsNumber = false;
+		}
+		// console.log('parseThresholds res: ', res)
 		return res;
 	}
 
@@ -716,8 +780,10 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 	}
 
 	onDataError() {
+		this.error = [];
 		this.crit = [];
 		this.warn = [];
+		this.groupError = {};
 		this.groupCrit = {};
 		this.groupWarn = {};
 	}
@@ -743,10 +809,22 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 		if (this.timeoutId) {
 			clearInterval(this.timeoutId);
 		}
-		if (this.panel.flipCard && (this.crit.length > 0 || this.warn.length > 0 || this.disabled.length > 0)) {
+		if (this.panel.flipCard && (this.error.length > 0 || this.crit.length > 0 || this.warn.length > 0 || this.disabled.length > 0)) {
 			this.timeoutId = setInterval(() => {
 				this.$panelContainer.toggleClass("flipped");
 			}, this.panel.flipTime * 1000);
+		}
+	}
+
+	getThresholdIcon() {
+		if (target.warn_icon) {
+			return target.warn_icon
+		} else if (target.crit_icon) {
+			return target.crit_icon
+		} else if (target.error_icon){
+			return target.error_icon
+		} else {
+			return null
 		}
 	}
 
