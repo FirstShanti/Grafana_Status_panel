@@ -84,8 +84,9 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 				iconSwitch: false,
 				// Changed colors to match Table Panel so colorised text is easier to read
 				colors: {
-					crit: 'rgba(245, 54, 54, 0.9)',
-					warn: 'rgba(237, 129, 40, 0.9)',
+					error: 'rgba(255, 0, 0, 0.9)',
+					crit: 'rgba(255, 125, 0, 0.9)',
+					warn: 'rgba(250, 255, 0, 0.9)',
 					ok: 'rgba(50, 128, 45, 0.9)',
 					disable: 'rgba(128, 128, 128, 0.9)'
 				},
@@ -113,8 +114,10 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 					_this.valueHandlers = ['Number Threshold', 'String Threshold', 'Date Threshold', 'Disable Criteria', 'Text Only'];
 					_this.aggregations = ['Last', 'First', 'Max', 'Min', 'Sum', 'Avg', 'Delta'];
 					_this.displayTypes = ['Regular', 'Annotation'];
-					_this.displayAliasTypes = ['Warning / Critical', 'Always'];
-					_this.displayValueTypes = ['Never', 'When Alias Displayed', 'Warning / Critical', 'Critical Only'];
+					_this.displayAliasTypes = ['Warning / Critical / Error', 'Always'];
+					_this.displayValueTypes = ['Never', 'When Alias Displayed', 'Warning / Critical / Error', 'Critical Only', 'Error only'];
+					_this.displayTags = ['none', '+/-', 'UP/DOWN', 'TRENDING/FALLING'];
+					_this.displayTagsType = ['Line', 'Metric'];
 					_this.colorModes = ['Panel', 'Metric', 'Disabled'];
 					_this.fontFormats = ['Regular', 'Bold', 'Italic'];
 					_this.statusMetrics = [];
@@ -135,6 +138,9 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 							if (typeof t.warn != "undefined") {
 								t.warn = new Date(t.warn);
 							}
+							if (typeof t.error != "undefined") {
+								t.error = new Date(t.error);
+							}
 						}
 					});
 
@@ -153,6 +159,7 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 
 					_this.statusCrit = [];
 					_this.statusWarn = [];
+					_this.statusError = [];
 					_this.statusMetric = null;
 
 					_this.addFilters();
@@ -301,6 +308,7 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 						if (measurement.valueHandler === "Number Threshold") {
 							measurement.crit = isNaN(Number(measurement.crit)) ? undefined : Number(measurement.crit);
 							measurement.warn = isNaN(Number(measurement.warn)) ? undefined : Number(measurement.warn);
+							measurement.error = isNaN(Number(measurement.error)) ? undefined : Number(measurement.error);
 						} else if (measurement.valueHandler === "String Threshold") {
 							if (typeof measurement.crit != "undefined") {
 								measurement.crit = String(measurement.crit);
@@ -308,11 +316,16 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 							if (typeof measurement.warn != "undefined") {
 								measurement.warn = String(measurement.warn);
 							}
+							if (typeof measurement.error != "undefined") {
+								measurement.error = String(measurement.error);
+							}
 						} else if (measurement.valueHandler === "Date Threshold") {
 							var c = new Date(measurement.crit),
-							    w = new Date(measurement.warn);
+							    w = new Date(measurement.warn),
+							    e = new Date(measurement.error);
 							measurement.crit = isNaN(c.getTime()) ? undefined : c;
 							measurement.warn = isNaN(w.getTime()) ? undefined : w;
+							measurement.error = isNaN(e.getTime()) ? undefined : e;
 						}
 						this.onRender();
 					}
@@ -352,8 +365,10 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 
 						this.crit = [];
 						this.warn = [];
+						this.error = [];
 						this.statusCrit = [];
 						this.statusWarn = [];
+						this.statusError = [];
 						this.disabled = [];
 						this.display = [];
 						this.annotation = [];
@@ -362,12 +377,14 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 						this.statusMetrics = [];
 						this.groupCrit = {};
 						this.groupWarn = {};
+						this.groupError = {};
 
 						if (this.panel.statusGroups) {
 							var statusGroupExists = false;
 							this.panel.statusGroups.forEach(function (element) {
 								_this5.groupCrit[element.name] = [];
 								_this5.groupWarn[element.name] = [];
+								_this5.groupError[element.name] = [];
 								if (element.name === 'Status Checks') {
 									statusGroupExists = true;
 								}
@@ -455,13 +472,14 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 						if (this.panel.isHideAlertsOnDisable && this.disabled.length > 0) {
 							this.crit = [];
 							this.warn = [];
+							this.error = [];
 							this.groupCrit = {};
 							this.groupWarn = {};
+							this.groupError = {};
 							this.display = [];
 						}
 
 						this.autoFlip();
-						this.iconSwitch()
 						this.updatePanelState();
 						this.handleCssDisplay();
 						this.parseUri();
@@ -502,10 +520,11 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 							if (target.valueHandler === "Threshold") {
 								// Use the same logic as Threshold Parsing to ensure we retain same behaviour
 								// i.e. map to Number Threshold if two floats (i.e. range check) otherwise map to String Threshold (i.e. exact match)
-								if (StatusPluginCtrl.isFloat(target.crit) && StatusPluginCtrl.isFloat(target.warn)) {
+								if (StatusPluginCtrl.isFloat(target.crit) && StatusPluginCtrl.isFloat(target.warn) && StatusPluginCtrl.isFloat(target.error)) {
 									target.valueHandler = "Number Threshold";
 									target.crit = Number(target.crit);
 									target.warn = Number(target.warn);
+									target.error = Number(target.error);
 								} else {
 									target.valueHandler = "String Threshold";
 									if (typeof target.crit != "undefined") {
@@ -513,6 +532,9 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 									}
 									if (typeof target.warn != "undefined") {
 										target.warn = String(target.warn);
+									}
+									if (typeof target.error != "undefined") {
+										target.error = String(target.error)
 									}
 								}
 							}
@@ -522,13 +544,14 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 					key: "handleThresholdStatus",
 					value: function handleThresholdStatus(series, target) {
 						series.thresholds = StatusPluginCtrl.parseThresholds(target);
-						series.inverted = series.thresholds.crit < series.thresholds.warn;
-						console.log('series: ', series)
-						console.log('target: ', target)
+						series.inverted = (series.thresholds.error < series.thresholds.crit) && (series.thresholds.crit < series.thresholds.warn);
+						// console.log('series: ', series)
+						// console.log('target: ', target)
 						var isCritical = false;
 						var isWarning = false;
+						var isError = false;
 						var isStatus = false;
-						var isCheckRanges = series.thresholds.warnIsNumber && series.thresholds.critIsNumber;
+						var isCheckRanges = series.thresholds.warnIsNumber && series.thresholds.critIsNumber && series.thresholds.errorIsNumber;
 
 						// alert(series.alias);
 
@@ -536,23 +559,31 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 							isStatus = true;
 							// this.statusMetrics.push(series);
 						}
-
 						if (isCheckRanges) {
+							console.log('series.alias: ', series.alias)
+							// console.log('series.inverted: ', series.inverted)
+							// console.log('series.display_value: ', series.display_value)
 							if (!series.inverted) {
-								if (series.display_value >= series.thresholds.crit) {
+								if (series.display_value >= series.thresholds.error) {
+									isError = true;
+								} else if (series.display_value >= series.thresholds.crit && series.alias) {
 									isCritical = true;
 								} else if (series.display_value >= series.thresholds.warn) {
 									isWarning = true;
 								}
 							} else {
-								if (series.display_value <= series.thresholds.crit && series.alias) {
+								if (series.display_value <= series.thresholds.error) {
+									isError = true;
+								} else if (series.display_value <= series.thresholds.crit && series.alias) {
 									isCritical = true;
 								} else if (series.display_value <= series.thresholds.warn) {
 									isWarning = true;
 								}
 							}
 						} else {
-							if (series.display_value == series.thresholds.crit && series.alias) {
+							if (series.display_value == series.thresholds.error) {
+								isError = true;
+							} else if (series.display_value == series.thresholds.crit && series.alias) {
 								isCritical = true;
 							} else if (series.display_value == series.thresholds.warn) {
 								isWarning = true;
@@ -560,16 +591,36 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 						}
 						// Add units-of-measure and decimal formatting or date formatting as needed
 						series.display_value = this.formatDisplayValue(series.display_value, target);
-						series.display_icon = this.getThresholdIcon(target)
-
+						series.display_icon = this.getThresholdIcon(target);
+						
+						[series.error_tag, series.error_tags, series.error_tags_type] = this.getTag(series.display_value, target.error_tags, target.error_tags_type);
+						[series.crit_tag, series.crit_tags, series.crit_tags_type] = this.getTag(series.display_value, target.crit_tags, target.crit_tags_type);
+						[series.warn_tag, series.warn_tags, series.warn_tags_type] = this.getTag(series.display_value, target.warn_tags, target.warn_tags_type);
+						
 						var displayValueWhenAliasDisplayed = 'When Alias Displayed' === target.displayValueWithAlias;
-						var displayValueFromWarning = 'Warning / Critical' === target.displayValueWithAlias;
+						var displayValueFromWarning = 'Warning / Critical / Error' === target.displayValueWithAlias;
 						var displayValueFromCritical = 'Critical Only' === target.displayValueWithAlias;
+						var displayValueFromError = 'Error Only' === target.displayValueWithAlias;
+						
 
-						if (isCritical) {
+						if (isError) {
+							series.displayType = this.displayTypes[0];
+							series.isDisplayValue = displayValueWhenAliasDisplayed || displayValueFromError || displayValueFromWarning;
+							if (isStatus) {
+								this.statusError.push(series);
+							} else {
+								this.error.push(series);
+								if (series.hasOwnProperty('group')) {
+									this.groupError[series.group.name].push(series);
+								}
+							}
+							// console.log('error series: ', series)
+							// console.log('this.statusError: ', this.statusError)
+							// console.log('this.groupError[series.group.name]: ', this.groupError[series.group.name])
+						} else if (isCritical) {
 							//In critical state we don't show the error as annotation
 							series.displayType = this.displayTypes[0];
-							series.isDisplayValue = displayValueWhenAliasDisplayed || displayValueFromWarning || displayValueFromCritical;
+							series.isDisplayValue = displayValueWhenAliasDisplayed || displayValueFromCritical || displayValueFromWarning;
 							if (isStatus) {
 								this.statusCrit.push(series);
 							} else {
@@ -600,6 +651,22 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 						} else if (isStatus) {
 							this.statusMetrics.push(series);
 						}
+						console.log('series after handling:', series)
+					}
+				}, {
+					key: "getTag",
+					value: function getTag(value, displayTags, displayTagsType) {
+						// series.displayTagsType, series.displayTagsPosition
+						console.log(value, displayTags, displayTagsType)
+						if (displayTags === '+/-') {
+							return [value > 0 ? '+':'-', displayTags, displayTagsType]
+						} else if (displayTags === 'UP/DOWN') {
+							return [value > 0 ? 'UP':'DOWN' , displayTags, displayTagsType]
+						} else if (displayTags === 'TRENDING/FALLING') {
+							return [value > 0 ? 'TRENDING':'FALLING', displayTags, displayTagsType]
+						} else {
+							return [null, null, null]
+						}
 					}
 				}, {
 					key: "getThresholdIcon",
@@ -608,6 +675,8 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 							return target.warn_icon
 						} else if (target.crit_icon) {
 							return target.crit_icon
+						} else if (target.error_icon){
+							return target.error_icon
 						} else {
 							return null
 						}
@@ -682,7 +751,7 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 							this.panelState = 'error-state';
 						} else if (this.disabled.length > 0) {
 							this.panelState = 'disabled-state';
-						} else if (this.statusCrit.length > 0) {
+						} else if (this.statusCrit.length > 0 || this.statusError.length > 0) {
 							this.panelState = 'error-state';
 						} else if (this.statusWarn.length > 0) {
 							this.panelState = 'warn-state';
@@ -759,7 +828,7 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 						if (this.panel.maxAlertNumber != null && this.panel.maxAlertNumber >= 0) {
 							var currentMaxAllowedAlerts = this.panel.maxAlertNumber;
 							var filteredOutAlerts = 0;
-							var arrayNamesToSlice = ["disabled", "crit", "warn", "display"];
+							var arrayNamesToSlice = ["disabled", "error", "crit", "warn", "display"];
 							arrayNamesToSlice.forEach(function (arrayName) {
 								var originAlertCount = _this7[arrayName].length;
 								_this7[arrayName] = _this7[arrayName].slice(0, currentMaxAllowedAlerts);
@@ -815,8 +884,10 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 				}, {
 					key: "onDataError",
 					value: function onDataError() {
+						this.error = [];
 						this.crit = [];
 						this.warn = [];
+						this.groupError = {};
 						this.groupCrit = {};
 						this.groupWarn = {};
 					}
@@ -833,20 +904,10 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 						if (this.timeoutId) {
 							clearInterval(this.timeoutId);
 						}
-						if (this.panel.flipCard && (this.crit.length > 0 || this.warn.length > 0 || this.disabled.length > 0)) {
+						if (this.panel.flipCard && (this.error.length > 0 || this.crit.length > 0 || this.warn.length > 0 || this.disabled.length > 0)) {
 							this.timeoutId = setInterval(function () {
 								_this8.$panelContainer.toggleClass("flipped");
 							}, this.panel.flipTime * 1000);
-						}
-					}
-				}, {
-					key: "iconSwitch",
-					value: function iconSwitch() {
-						var _this8 = this;
-						if (this.panel.iconSwitch) {
-							_this8.$panelContainer.find('img.icons').addClass('icons-on');
-						} else {
-							_this8.$panelContainer.find('img.icons').removeClass('icons-on');
 						}
 					}
 				}, {
@@ -912,6 +973,17 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 						} else {
 							res.crit = metricOptions.crit;
 							res.critIsNumber = false;
+						}
+						console.log('metric option error: ', metricOptions.error)
+						if (StatusPluginCtrl.isFloat(metricOptions.error)) {
+							res.error = parseFloat(metricOptions.error);
+							res.errorIsNumber = true;
+						} else if (metricOptions.error instanceof Date) {
+							res.error = metricOptions.error.valueOf();
+							res.errorIsNumber = true;
+						} else {
+							res.error = metricOptions.error;
+							res.errorIsNumber = false;
 						}
 						// console.log('parseThresholds res: ', res)
 						return res;
