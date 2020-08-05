@@ -133,4 +133,49 @@
   font-style: italic;
 }
 
+.example-container {
+  height: auto;
+  width: auto;
+  overflow: auto;
+}
+
+table {
+  width: auto;
+  border: 1px solid #080808;
+  border-collapse: collapse !important;
+}
+
+td.icon {
+/*  width: 21px;
+  width: fit-content;*/
+  width: auto;
+  border-right: 1px solid #080808;
+  padding: 5px;
+}
+
+td.name {
+  width: 200px !important;
+  /*width: fit-content;*/
+  border-right: 1px solid #080808;
+  padding: 5px;
+}
+
+td.value {
+  width: 150px;
+  padding: 5px;
+}
+
+td.mat-column-star {
+  width: 20px;
+  padding-right: 8px;
+}
+
+th.mat-column-position, td.mat-column-position {
+  padding-left: 8px;
+}
+
+img {
+  width: 21px;
+  height: 21px;
+}
 /*# sourceMappingURL=dist/css/status_panel.css.map */

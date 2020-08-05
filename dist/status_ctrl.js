@@ -94,7 +94,8 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 				isIgnoreOKColors: false,
 				isHideAlertsOnDisable: false,
 				cornerRadius: 0,
-				isAutoScrollOnOverflow: false
+				isAutoScrollOnOverflow: false,
+				viewFormat: 'Default'
 			};
 
 			_export("StatusPluginCtrl", StatusPluginCtrl = function (_MetricsPanelCtrl) {
@@ -116,10 +117,10 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 					_this.displayTypes = ['Regular', 'Annotation'];
 					_this.displayAliasTypes = ['Warning / Critical / Error', 'Always'];
 					_this.displayValueTypes = ['Never', 'When Alias Displayed', 'Warning / Critical / Error', 'Critical Only', 'Error only'];
-					// _this.displayTags = ['none', '+/-', 'UP/DOWN', 'TRENDING/FALLING'];
 					_this.displayTagsType = ['Line', 'Metric'];
 					_this.colorModes = ['Panel', 'Metric', 'Disabled'];
 					_this.fontFormats = ['Regular', 'Bold', 'Italic'];
+					_this.panelFormat = ['Default', 'Tabular'];
 					_this.statusMetrics = [];
 					_this.panelShapes = ['Rectangle', 'Ellipse', 'Circle'];
 

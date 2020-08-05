@@ -48,6 +48,22 @@
 						required></select>
 			</div>
 		</div>
+		<div class="gf-form">
+			<span class="gf-form-label width-12">
+			  Panel format
+			  <info-popover mode="right-normal">
+				Display metrics, values, icons, tags by different formats.
+			  </info-popover>
+			</span>
+			<div class="gf-form-select-wrapper max-width-12">
+				<select class="gf-form-input"
+						ng-init="ctrl.panel.viewFormat = (ctrl.panel.viewFormat ? ctrl.panel.viewFormat : ctrl.panelFormat[0])"
+						ng-model="ctrl.panel.viewFormat"
+						ng-options="t for t in ctrl.panelFormat"
+						ng-change="ctrl.onRender()"
+						required></select>
+			</div>
+		</div>
 	</div>
 
 	<!--Icon on/off -->
