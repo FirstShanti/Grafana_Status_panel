@@ -44,7 +44,7 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 		this.aggregations = ['Last', 'First', 'Max', 'Min', 'Sum', 'Avg', 'Delta'];
 		this.displayTypes = ['Regular', 'Annotation'];
 		this.displayAliasTypes = ['Warning / Critical / Error', 'Always'];
-		this.displayValueTypes = ['Never', 'When Alias Displayed', 'Warning / Critical / Error', 'Critical Only', 'Error only';
+		this.displayValueTypes = ['Never', 'When Alias Displayed', 'Warning / Critical / Error', 'Critical Only', 'Error only'];
 		this.displayTags = ['+/-', 'UP/DOWN', 'TRENDING/FALLING'];
 		this.displayTagsType = ['Line', 'Metric'];
 		this.colorModes = ['Panel', 'Metric', 'Disabled'];
@@ -532,7 +532,7 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 			series.isDisplayValue = displayValueWhenAliasDisplayed;
 			if(series.displayType == "Annotation") {
 				this.annotation.push(series);
-			} 
+			}
 			else {
 				this.display.push(series);
 			}
@@ -552,7 +552,7 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 			return [null, null, null]
 		}
 	}
-	
+
 	formatDisplayValue(value, target) {
 		// Format the display value. Set to "Invalid" if value is out-of-bounds or a type mismatch with the handler
 		if (target.valueHandler === "Number Threshold") {
@@ -627,7 +627,7 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 
 	hideAllWarnings() {
 		for (var i = span.length; i--;) {
-			span[i].className = 'NameHighlights'; 
+			span[i].className = 'NameHighlights';
 		}
 	};
 
