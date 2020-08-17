@@ -1,13 +1,13 @@
-import {MetricsPanelCtrl} from "app/plugins/sdk";
+import {MetricsPanelCtrl} from "grafana/app/plugins/sdk";
 import _ from "lodash";
-import TimeSeries from "app/core/time_series2";
-import coreModule from "app/core/core_module";
-import kbn from "app/core/utils/kbn";
+import TimeSeries from "grafana/app/core/time_series2";
+import coreModule from "grafana/app/core/core_module";
+import kbn from "grafana/app/core/utils/kbn";
 import moment from "moment";
-import 'jquery.flot';
-import 'jquery.flot.pie';
+// import 'jquery.flot';
+// import 'jquery.flot.pie';
 
-import './css/status_panel.css!';
+import './css/status_panel.scss';
 
 // Set and populate panel defaults
 const panelDefaults = {
@@ -44,7 +44,7 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 		this.aggregations = ['Last', 'First', 'Max', 'Min', 'Sum', 'Avg', 'Delta'];
 		this.displayTypes = ['Regular', 'Annotation'];
 		this.displayAliasTypes = ['Warning / Critical / Error', 'Always'];
-		this.displayValueTypes = ['Never', 'When Alias Displayed', 'Warning / Critical / Error', 'Critical Only', 'Error only';
+		this.displayValueTypes = ['Never', 'When Alias Displayed', 'Warning / Critical / Error', 'Critical Only', 'Error only'];
 		this.displayTags = ['+/-', 'UP/DOWN', 'TRENDING/FALLING'];
 		this.displayTagsType = ['Line', 'Metric'];
 		this.colorModes = ['Panel', 'Metric', 'Disabled'];

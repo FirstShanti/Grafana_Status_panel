@@ -68,6 +68,13 @@ module.exports = {
         })
       },
       {
+	test: /\.(s*)css$/,
+	use: [
+            'css-loader',
+            'sass-loader',
+         ]
+      },
+      {
         test: /\.light\.(s?)css$/,
         use: ExtractTextPluginLight.extract({
           fallback: 'style-loader',
