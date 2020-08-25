@@ -211,6 +211,9 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 		_this.statusWarn = [];
 		_this.statusMetric = null;
 
+		// FIND ME!
+		_this.status = [];
+
 		_this.addFilters();
 		return _this;
 	}

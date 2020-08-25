@@ -86,6 +86,9 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 		this.statusWarn = [];
 		this.statusMetric = null;
 
+		// FIND ME!
+		this.status = [];
+
 		this.addFilters()
 	}
 
