@@ -48,6 +48,22 @@
 						required></select>
 			</div>
 		</div>
+		<div class="gf-form">
+			<span class="gf-form-label width-12">
+			  Panel format
+			  <info-popover mode="right-normal">
+				Display metrics, values, icons, tags by different formats.
+			  </info-popover>
+			</span>
+			<div class="gf-form-select-wrapper max-width-12">
+				<select class="gf-form-input"
+						ng-init="ctrl.panel.viewFormat = (ctrl.panel.viewFormat ? ctrl.panel.viewFormat : ctrl.panelFormat[0])"
+						ng-model="ctrl.panel.viewFormat"
+						ng-options="t for t in ctrl.panelFormat"
+						ng-change="ctrl.onRender()"
+						required></select>
+			</div>
+		</div>
 	</div>
 
 	<!--Icon on/off -->
@@ -381,14 +397,7 @@
 				    <span class="gf-form-label width-3">
 					  tag
 					</span>
-					<div class="gf-form-select-wrapper max-width-8">
-						<select class="gf-form-input"
-								ng-init="measurement.warn_tags = (measurement.warn_tags ? measurement.warn_tags : ctrl.displayTags[0])"
-								ng-model="measurement.warn_tags"
-								ng-options="t for t in ctrl.displayTags"
-								ng-change="ctrl.onRender()"
-						></select>
-					</div>
+					<input class="gf-form-input max-width-8" type='text' ng-model="measurement.warn_tag" ng-change="ctrl.onRender()">
 					<div class="gf-form-select-wrapper max-width-7">
 						<select class="gf-form-input"
 								ng-init="measurement.warn_tags_type = (measurement.warn_tags_type ? measurement.warn_tags_type : ctrl.displayTagsType[0])"
@@ -417,14 +426,7 @@
 					<span class="gf-form-label width-3">
 					  tag
 					</span>
-					<div class="gf-form-select-wrapper max-width-8">
-						<select class="gf-form-input"
-								ng-init="measurement.crit_tags = (measurement.crit_tags ? measurement.crit_tags : ctrl.displayTags[0])"
-								ng-model="measurement.crit_tags"
-								ng-options="t for t in ctrl.displayTags"
-								ng-change="ctrl.onRender()"
-						></select>
-					</div> 
+					<input class="gf-form-input max-width-8" type='text' ng-model="measurement.crit_tag" ng-change="ctrl.onRender()">
 					<div class="gf-form-select-wrapper max-width-7">
 						<select class="gf-form-input"
 								ng-init="measurement.crit_tags_type = (measurement.crit_tags_type ? measurement.crit_tags_type : ctrl.displayTagsType[0])"
@@ -453,14 +455,7 @@
 					<span class="gf-form-label width-3">
 					  tag
 					</span>
-					<div class="gf-form-select-wrapper max-width-8">
-						<select class="gf-form-input"
-								ng-init="measurement.error_tags = (measurement.error_tags ? measurement.error_tags : ctrl.displayTags[0])"
-								ng-model="measurement.error_tags"
-								ng-options="t for t in ctrl.displayTags"
-								ng-change="ctrl.onRender()"
-						></select>
-					</div>
+					<input class="gf-form-input max-width-8" type='text' ng-model="measurement.error_tag" ng-change="ctrl.onRender()">
 					<div class="gf-form-select-wrapper max-width-7">
 						<select class="gf-form-input"
 								ng-init="measurement.error_tags_type = (measurement.error_tags_type ? measurement.error_tags_type : ctrl.displayTagsType[0])"
@@ -530,7 +525,6 @@
 		</div>
 		<!-- prefix preferences -->
 		<!-- <div class="section gf-form-group">
-
 			<div ng-if="measurement.valueHandler == 'Number Threshold' || measurement.valueHandler == 'String Threshold' || measurement.valueHandler == 'Date Threshold'">
 				<h5 class="section-heading">Prefix prefere
 					<info-popover mode="normal">

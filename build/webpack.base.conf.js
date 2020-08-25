@@ -1,11 +1,7 @@
 const path = require('path');
 const webpack = require('webpack');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
-const ExtractTextPlugin = require('extract-text-webpack-plugin');
 
-const ExtractTextPluginBase = new ExtractTextPlugin('./css/panel.base.css');
-const ExtractTextPluginLight = new ExtractTextPlugin('./css/panel.light.css');
-const ExtractTextPluginDark = new ExtractTextPlugin('./css/panel.dark.css');
 
 function resolve(dir) {
   return path.join(__dirname, '..', dir)
@@ -32,14 +28,14 @@ module.exports = {
     }
   ],
   plugins: [
-    new webpack.optimize.OccurrenceOrderPlugin(),
+    // new webpack.optimize.OccurrenceOrderPlugin(),
     new CopyWebpackPlugin([
       { from: 'plugin.json' },
-      { from: 'partials/*' }
+      { from: 'partials/*' },
+      { from: 'module.html' },
+      { from: 'editor.html' },
+      { from: 'img/', to: 'img/'}
     ]),
-    ExtractTextPluginBase,
-    ExtractTextPluginLight,
-    ExtractTextPluginDark,
   ],
   resolve: {
     alias: {
@@ -61,32 +57,8 @@ module.exports = {
         }
       },
       {
-        test: /\.base\.(s?)css$/,
-        use: ExtractTextPluginBase.extract({
-          fallback: 'style-loader',
-          use: ['css-loader', 'sass-loader']
-        })
-      },
-      {
-	test: /\.(s*)css$/,
-	use: [
-            'css-loader',
-            'sass-loader',
-         ]
-      },
-      {
-        test: /\.light\.(s?)css$/,
-        use: ExtractTextPluginLight.extract({
-          fallback: 'style-loader',
-          use: ['css-loader', 'sass-loader']
-        })
-      },
-      {
-        test: /\.dark\.(s?)css$/,
-        use: ExtractTextPluginDark.extract({
-          fallback: 'style-loader',
-          use: ['css-loader', 'sass-loader']
-        })
+        test: /\.css$/,
+        use: ['style-loader', 'css-loader']
       }
     ]
   }

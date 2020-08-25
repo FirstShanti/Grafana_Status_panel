@@ -176,6 +176,7 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 		_this.fontFormats = ['Regular', 'Bold', 'Italic'];
 		_this.statusMetrics = [];
 		_this.panelShapes = ['Rectangle', 'Ellipse', 'Circle'];
+		_this.panelFormat = ['Default', 'Tabular'];
 
 		//Push the default status check group
 		if (!_this.panel.statusGroups) {
@@ -599,8 +600,6 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 			var isStatus = false;
 			var isCheckRanges = series.thresholds.errorIsNumber && series.thresholds.warnIsNumber && series.thresholds.critIsNumber;
 
-			alert(series.alias);
-
 			if (series.hasOwnProperty('group') && series.group === this.panel.statusGroups[0]) {
 				isStatus = true;
 				// this.statusMetrics.push(series);
@@ -636,23 +635,31 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 
 			// Add units-of-measure and decimal formatting or date formatting as needed
 			series.display_value = this.formatDisplayValue(series.display_value, target);
-			series.display_icon = this.getThresholdIcon(target)[(series.error_tag, series.error_tags, series.error_tags_type)] = this.getTag(series.display_value, target.error_tags, target.error_tags_type);
+			series.display_icon = this.getThresholdIcon(target);
 
-			var _getTag = this.getTag(series.display_value, target.crit_tags, target.crit_tags_type);
+			var _getTag = this.getTag(series.display_value, target.error_tags, target.error_tags_type);
 
 			var _getTag2 = _slicedToArray(_getTag, 3);
 
-			series.crit_tag = _getTag2[0];
-			series.crit_tags = _getTag2[1];
-			series.crit_tags_type = _getTag2[2];
+			series.error_tag = _getTag2[0];
+			series.error_tags = _getTag2[1];
+			series.error_tags_type = _getTag2[2];
 
-			var _getTag3 = this.getTag(series.display_value, target.warn_tags, target.warn_tags_type);
+			var _getTag3 = this.getTag(series.display_value, target.crit_tags, target.crit_tags_type);
 
 			var _getTag4 = _slicedToArray(_getTag3, 3);
 
-			series.warn_tag = _getTag4[0];
-			series.warn_tags = _getTag4[1];
-			series.warn_tags_type = _getTag4[2];
+			series.crit_tag = _getTag4[0];
+			series.crit_tags = _getTag4[1];
+			series.crit_tags_type = _getTag4[2];
+
+			var _getTag5 = this.getTag(series.display_value, target.warn_tags, target.warn_tags_type);
+
+			var _getTag6 = _slicedToArray(_getTag5, 3);
+
+			series.warn_tag = _getTag6[0];
+			series.warn_tags = _getTag6[1];
+			series.warn_tags_type = _getTag6[2];
 
 
 			var displayValueWhenAliasDisplayed = 'When Alias Displayed' === target.displayValueWithAlias;
@@ -950,7 +957,7 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 		}
 	}, {
 		key: "getThresholdIcon",
-		value: function getThresholdIcon() {
+		value: function getThresholdIcon(target) {
 			if (target.warn_icon) {
 				return target.warn_icon;
 			} else if (target.crit_icon) {
@@ -1105,13 +1112,63 @@ module.exports = __WEBPACK_EXTERNAL_MODULE_7__;
 /* 8 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(9)(false);
-// Module
-exports.push([module.i, ".status-panel {\n  overflow: hidden;\n  position: relative;\n  width: 100%;\n  height: 100%;\n  width: -moz-fit-content;\n  text-align: left;\n  margin-left: auto;\n  margin-right: auto; }\n  .status-panel h1 {\n    font-size: 1.5rem; }\n  .status-panel .st-card-front {\n    position: absolute;\n    width: 100%;\n    height: 100%;\n    display: flex;\n    flex-direction: column;\n    justify-content: center;\n    align-content: center; }\n  .status-panel .st-card-back {\n    position: relative;\n    display: flex;\n    justify-content: space-between;\n    flex-direction: column; }\n    .status-panel .st-card-back .top_section .status-panel-annotation_row {\n      text-align: left;\n      font-size: 0.85rem; }\n      .status-panel .st-card-back .top_section .status-panel-annotation_row .row-overflow {\n        max-width: 150px;\n        overflow: hidden;\n        text-overflow: ellipsis;\n        white-space: nowrap; }\n    .status-panel .st-card-back .bottom_section {\n      display: flex;\n      flex-direction: column;\n      justify-content: center;\n      align-content: center; }\n      .status-panel .st-card-back .bottom_section .status_alerts_row {\n        min-height: 1px; }\n        .status-panel .st-card-back .bottom_section .status_alerts_row .status_extra_alerts {\n          padding-top: 2px;\n          font-size: 0.85rem; }\n    .status-panel .st-card-back .center_content_hidden_section {\n      min-height: 1px; }\n  .status-panel .st-card-front,\n  .status-panel .st-card-back {\n    backface-visibility: hidden;\n    transition: transform 0.5s; }\n\n.marquee_container {\n  overflow: hidden; }\n  .marquee_container .marquee_element {\n    backface-visibility: hidden;\n    transition: transform 0.5s;\n    display: inline-block;\n    animation: marquee_container 15s linear infinite; }\n  .marquee_container .marquee_element:hover {\n    animation-play-state: paused; }\n\n/* Make it move */\n@keyframes marquee_container {\n  0% {\n    transform: translate(0, 100%); }\n  100% {\n    transform: translate(0, -100%); } }\n\n.st-card-front .ok-text, .st-card-front .warning-text, .st-card-front .fail-text, .st-card-front .no-data-text, .st-card-front .disabled-text {\n  display: none;\n  font-size: 2.0rem; }\n\n.ok-state .ok-text {\n  display: block; }\n\n.warn-state .warning-text {\n  display: block; }\n\n.error-state .fail-text {\n  display: block; }\n\n.no-data-state .no-data-text {\n  display: block; }\n\n.disabled-state .disabled-text {\n  display: block; }\n\n.st-card.effect-hover .st-card-back {\n  -webkit-transform: rotateY(-180deg);\n  transform: rotateY(-180deg); }\n\n.st-card.effect-hover:hover .st-card-front, .st-card.effect-hover.flipped .st-card-front {\n  -webkit-transform: rotateY(-180deg);\n  transform: rotateY(-180deg); }\n\n.st-card.effect-hover:hover .st-card-back, .st-card.effect-hover.flipped .st-card-back {\n  -webkit-transform: rotateY(0);\n  transform: rotateY(0); }\n\n.st-card:not(.effect-hover) .st-card-front {\n  display: none; }\n\n.boldAlertMetric {\n  font-weight: bold; }\n\n.italicAlertMetric {\n  font-style: italic; }\n\n.icons {\n  width: 21px;\n  height: 21px;\n  display: none; }\n\n.icons-on {\n  display: initial; }\n", ""]);
 
+var content = __webpack_require__(9);
+
+if(typeof content === 'string') content = [[module.i, content, '']];
+
+var transform;
+var insertInto;
+
+
+
+var options = {"hmr":true}
+
+options.transform = transform
+options.insertInto = undefined;
+
+var update = __webpack_require__(11)(content, options);
+
+if(content.locals) module.exports = content.locals;
+
+if(false) {
+	module.hot.accept("!!../../node_modules/css-loader/dist/cjs.js!./status_panel.css", function() {
+		var newContent = require("!!../../node_modules/css-loader/dist/cjs.js!./status_panel.css");
+
+		if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
+
+		var locals = (function(a, b) {
+			var key, idx = 0;
+
+			for(key in a) {
+				if(!b || a[key] !== b[key]) return false;
+				idx++;
+			}
+
+			for(key in b) idx--;
+
+			return idx === 0;
+		}(content.locals, newContent.locals));
+
+		if(!locals) throw new Error('Aborting CSS HMR due to changed css-modules locals.');
+
+		update(newContent);
+	});
+
+	module.hot.dispose(function() { update(); });
+}
 
 /***/ }),
 /* 9 */
+/***/ (function(module, exports, __webpack_require__) {
+
+exports = module.exports = __webpack_require__(10)(false);
+// Module
+exports.push([module.i, ".status-panel {\n\toverflow: hidden;\n\tposition: relative;\n\twidth: 100%;\n\theight: 100%;\n\twidth: -moz-fit-content;\n\ttext-align: left;\n\tmargin-left: auto;\n\tmargin-right: auto;\n}\n\n.status-panel h1 {\n\tfont-size: 1.5rem;\n}\n\n.status-panel .st-card-front {\n\tposition: absolute;\n\twidth: 100%;\n\theight: 100%;\n\tdisplay: flex;\n\tflex-direction: column;\n\tjustify-content: center;\n\talign-content: center;\n}\n\n.status-panel .st-card-back {\n\tposition: relative;\n\tdisplay: flex;\n\tjustify-content: space-between;\n\tflex-direction: column;\n}\n\n.status-panel .st-card-back .top_section .status-panel-annotation_row {\n\ttext-align: left;\n\tfont-size: 0.85rem;\n}\n\n.status-panel .st-card-back .top_section .status-panel-annotation_row .row-overflow {\n\tmax-width: 150px;\n\toverflow: hidden;\n\ttext-overflow: ellipsis;\n\twhite-space: nowrap;\n}\n\n.status-panel .st-card-back .bottom_section {\n\tdisplay: flex;\n\tflex-direction: column;\n\tjustify-content: center;\n\talign-content: center;\n}\n\n.status-panel .st-card-back .bottom_section .status_alerts_row {\n\tmin-height: 1px;\n}\n\n.status-panel .st-card-back .bottom_section .status_alerts_row .status_extra_alerts {\n\tpadding-top: 2px;\n\tfont-size: 0.85rem;\n}\n\n.status-panel .st-card-back .center_content_hidden_section {\n\tmin-height: 1px;\n}\n\n.status-panel .st-card-front,\n  .status-panel .st-card-back {\n\tbackface-visibility: hidden;\n\ttransition: transform 0.5s;\n}\n\n.marquee_container {\n\toverflow: hidden;\n}\n\n.marquee_container .marquee_element {\n\tbackface-visibility: hidden;\n\ttransition: transform 0.5s;\n\tdisplay: inline-block;\n\tanimation: marquee_container 15s linear infinite;\n}\n\n.marquee_container .marquee_element:hover {\n\tanimation-play-state: paused;\n}\n\n/* Make it move */\n@keyframes marquee_container {\n\t0% {\n\t\ttransform: translate(0, 100%);\n\t}\n\n\t100% {\n\t\ttransform: translate(0, -100%);\n\t}\n}\n\n.st-card-front .ok-text, .st-card-front .warning-text, .st-card-front .fail-text, .st-card-front .no-data-text, .st-card-front .disabled-text {\n\tdisplay: none;\n\tfont-size: 2.0rem;\n}\n\n.ok-state .ok-text {\n\tdisplay: block;\n}\n\n.warn-state .warning-text {\n\tdisplay: block;\n}\n\n.error-state .fail-text {\n\tdisplay: block;\n}\n\n.no-data-state .no-data-text {\n\tdisplay: block;\n}\n\n.disabled-state .disabled-text {\n\tdisplay: block;\n}\n\n.st-card.effect-hover .st-card-back {\n\t-webkit-transform: rotateY(-180deg);\n\ttransform: rotateY(-180deg);\n}\n\n.st-card.effect-hover:hover .st-card-front, .st-card.effect-hover.flipped .st-card-front {\n\t-webkit-transform: rotateY(-180deg);\n\ttransform: rotateY(-180deg);\n}\n\n.st-card.effect-hover:hover .st-card-back, .st-card.effect-hover.flipped .st-card-back {\n\t-webkit-transform: rotateY(0);\n\ttransform: rotateY(0);\n}\n\n.st-card:not(.effect-hover) .st-card-front {\n\tdisplay: none;\n}\n\n.boldAlertMetric {\n\tfont-weight: bold;\n}\n\n.italicAlertMetric {\n\tfont-style: italic;\n}\n\n.icons {\n\twidth: 21px;\n\theight: 21px;\n\tdisplay: none;\n}\n\n.icons-on {\n\tdisplay: initial;\n}", ""]);
+
+
+/***/ }),
+/* 10 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1207,5 +1264,483 @@ function toComment(sourceMap) {
   return "/*# ".concat(data, " */");
 }
 
+/***/ }),
+/* 11 */
+/***/ (function(module, exports, __webpack_require__) {
+
+/*
+	MIT License http://www.opensource.org/licenses/mit-license.php
+	Author Tobias Koppers @sokra
+*/
+
+var stylesInDom = {};
+
+var	memoize = function (fn) {
+	var memo;
+
+	return function () {
+		if (typeof memo === "undefined") memo = fn.apply(this, arguments);
+		return memo;
+	};
+};
+
+var isOldIE = memoize(function () {
+	// Test for IE <= 9 as proposed by Browserhacks
+	// @see http://browserhacks.com/#hack-e71d8692f65334173fee715c222cb805
+	// Tests for existence of standard globals is to allow style-loader
+	// to operate correctly into non-standard environments
+	// @see https://github.com/webpack-contrib/style-loader/issues/177
+	return window && document && document.all && !window.atob;
+});
+
+var getTarget = function (target) {
+  return document.querySelector(target);
+};
+
+var getElement = (function (fn) {
+	var memo = {};
+
+	return function(target) {
+                // If passing function in options, then use it for resolve "head" element.
+                // Useful for Shadow Root style i.e
+                // {
+                //   insertInto: function () { return document.querySelector("#foo").shadowRoot }
+                // }
+                if (typeof target === 'function') {
+                        return target();
+                }
+                if (typeof memo[target] === "undefined") {
+			var styleTarget = getTarget.call(this, target);
+			// Special case to return head of iframe instead of iframe itself
+			if (window.HTMLIFrameElement && styleTarget instanceof window.HTMLIFrameElement) {
+				try {
+					// This will throw an exception if access to iframe is blocked
+					// due to cross-origin restrictions
+					styleTarget = styleTarget.contentDocument.head;
+				} catch(e) {
+					styleTarget = null;
+				}
+			}
+			memo[target] = styleTarget;
+		}
+		return memo[target]
+	};
+})();
+
+var singleton = null;
+var	singletonCounter = 0;
+var	stylesInsertedAtTop = [];
+
+var	fixUrls = __webpack_require__(12);
+
+module.exports = function(list, options) {
+	if (typeof DEBUG !== "undefined" && DEBUG) {
+		if (typeof document !== "object") throw new Error("The style-loader cannot be used in a non-browser environment");
+	}
+
+	options = options || {};
+
+	options.attrs = typeof options.attrs === "object" ? options.attrs : {};
+
+	// Force single-tag solution on IE6-9, which has a hard limit on the # of <style>
+	// tags it will allow on a page
+	if (!options.singleton && typeof options.singleton !== "boolean") options.singleton = isOldIE();
+
+	// By default, add <style> tags to the <head> element
+        if (!options.insertInto) options.insertInto = "head";
+
+	// By default, add <style> tags to the bottom of the target
+	if (!options.insertAt) options.insertAt = "bottom";
+
+	var styles = listToStyles(list, options);
+
+	addStylesToDom(styles, options);
+
+	return function update (newList) {
+		var mayRemove = [];
+
+		for (var i = 0; i < styles.length; i++) {
+			var item = styles[i];
+			var domStyle = stylesInDom[item.id];
+
+			domStyle.refs--;
+			mayRemove.push(domStyle);
+		}
+
+		if(newList) {
+			var newStyles = listToStyles(newList, options);
+			addStylesToDom(newStyles, options);
+		}
+
+		for (var i = 0; i < mayRemove.length; i++) {
+			var domStyle = mayRemove[i];
+
+			if(domStyle.refs === 0) {
+				for (var j = 0; j < domStyle.parts.length; j++) domStyle.parts[j]();
+
+				delete stylesInDom[domStyle.id];
+			}
+		}
+	};
+};
+
+function addStylesToDom (styles, options) {
+	for (var i = 0; i < styles.length; i++) {
+		var item = styles[i];
+		var domStyle = stylesInDom[item.id];
+
+		if(domStyle) {
+			domStyle.refs++;
+
+			for(var j = 0; j < domStyle.parts.length; j++) {
+				domStyle.parts[j](item.parts[j]);
+			}
+
+			for(; j < item.parts.length; j++) {
+				domStyle.parts.push(addStyle(item.parts[j], options));
+			}
+		} else {
+			var parts = [];
+
+			for(var j = 0; j < item.parts.length; j++) {
+				parts.push(addStyle(item.parts[j], options));
+			}
+
+			stylesInDom[item.id] = {id: item.id, refs: 1, parts: parts};
+		}
+	}
+}
+
+function listToStyles (list, options) {
+	var styles = [];
+	var newStyles = {};
+
+	for (var i = 0; i < list.length; i++) {
+		var item = list[i];
+		var id = options.base ? item[0] + options.base : item[0];
+		var css = item[1];
+		var media = item[2];
+		var sourceMap = item[3];
+		var part = {css: css, media: media, sourceMap: sourceMap};
+
+		if(!newStyles[id]) styles.push(newStyles[id] = {id: id, parts: [part]});
+		else newStyles[id].parts.push(part);
+	}
+
+	return styles;
+}
+
+function insertStyleElement (options, style) {
+	var target = getElement(options.insertInto)
+
+	if (!target) {
+		throw new Error("Couldn't find a style target. This probably means that the value for the 'insertInto' parameter is invalid.");
+	}
+
+	var lastStyleElementInsertedAtTop = stylesInsertedAtTop[stylesInsertedAtTop.length - 1];
+
+	if (options.insertAt === "top") {
+		if (!lastStyleElementInsertedAtTop) {
+			target.insertBefore(style, target.firstChild);
+		} else if (lastStyleElementInsertedAtTop.nextSibling) {
+			target.insertBefore(style, lastStyleElementInsertedAtTop.nextSibling);
+		} else {
+			target.appendChild(style);
+		}
+		stylesInsertedAtTop.push(style);
+	} else if (options.insertAt === "bottom") {
+		target.appendChild(style);
+	} else if (typeof options.insertAt === "object" && options.insertAt.before) {
+		var nextSibling = getElement(options.insertInto + " " + options.insertAt.before);
+		target.insertBefore(style, nextSibling);
+	} else {
+		throw new Error("[Style Loader]\n\n Invalid value for parameter 'insertAt' ('options.insertAt') found.\n Must be 'top', 'bottom', or Object.\n (https://github.com/webpack-contrib/style-loader#insertat)\n");
+	}
+}
+
+function removeStyleElement (style) {
+	if (style.parentNode === null) return false;
+	style.parentNode.removeChild(style);
+
+	var idx = stylesInsertedAtTop.indexOf(style);
+	if(idx >= 0) {
+		stylesInsertedAtTop.splice(idx, 1);
+	}
+}
+
+function createStyleElement (options) {
+	var style = document.createElement("style");
+
+	options.attrs.type = "text/css";
+
+	addAttrs(style, options.attrs);
+	insertStyleElement(options, style);
+
+	return style;
+}
+
+function createLinkElement (options) {
+	var link = document.createElement("link");
+
+	options.attrs.type = "text/css";
+	options.attrs.rel = "stylesheet";
+
+	addAttrs(link, options.attrs);
+	insertStyleElement(options, link);
+
+	return link;
+}
+
+function addAttrs (el, attrs) {
+	Object.keys(attrs).forEach(function (key) {
+		el.setAttribute(key, attrs[key]);
+	});
+}
+
+function addStyle (obj, options) {
+	var style, update, remove, result;
+
+	// If a transform function was defined, run it on the css
+	if (options.transform && obj.css) {
+	    result = options.transform(obj.css);
+
+	    if (result) {
+	    	// If transform returns a value, use that instead of the original css.
+	    	// This allows running runtime transformations on the css.
+	    	obj.css = result;
+	    } else {
+	    	// If the transform function returns a falsy value, don't add this css.
+	    	// This allows conditional loading of css
+	    	return function() {
+	    		// noop
+	    	};
+	    }
+	}
+
+	if (options.singleton) {
+		var styleIndex = singletonCounter++;
+
+		style = singleton || (singleton = createStyleElement(options));
+
+		update = applyToSingletonTag.bind(null, style, styleIndex, false);
+		remove = applyToSingletonTag.bind(null, style, styleIndex, true);
+
+	} else if (
+		obj.sourceMap &&
+		typeof URL === "function" &&
+		typeof URL.createObjectURL === "function" &&
+		typeof URL.revokeObjectURL === "function" &&
+		typeof Blob === "function" &&
+		typeof btoa === "function"
+	) {
+		style = createLinkElement(options);
+		update = updateLink.bind(null, style, options);
+		remove = function () {
+			removeStyleElement(style);
+
+			if(style.href) URL.revokeObjectURL(style.href);
+		};
+	} else {
+		style = createStyleElement(options);
+		update = applyToTag.bind(null, style);
+		remove = function () {
+			removeStyleElement(style);
+		};
+	}
+
+	update(obj);
+
+	return function updateStyle (newObj) {
+		if (newObj) {
+			if (
+				newObj.css === obj.css &&
+				newObj.media === obj.media &&
+				newObj.sourceMap === obj.sourceMap
+			) {
+				return;
+			}
+
+			update(obj = newObj);
+		} else {
+			remove();
+		}
+	};
+}
+
+var replaceText = (function () {
+	var textStore = [];
+
+	return function (index, replacement) {
+		textStore[index] = replacement;
+
+		return textStore.filter(Boolean).join('\n');
+	};
+})();
+
+function applyToSingletonTag (style, index, remove, obj) {
+	var css = remove ? "" : obj.css;
+
+	if (style.styleSheet) {
+		style.styleSheet.cssText = replaceText(index, css);
+	} else {
+		var cssNode = document.createTextNode(css);
+		var childNodes = style.childNodes;
+
+		if (childNodes[index]) style.removeChild(childNodes[index]);
+
+		if (childNodes.length) {
+			style.insertBefore(cssNode, childNodes[index]);
+		} else {
+			style.appendChild(cssNode);
+		}
+	}
+}
+
+function applyToTag (style, obj) {
+	var css = obj.css;
+	var media = obj.media;
+
+	if(media) {
+		style.setAttribute("media", media)
+	}
+
+	if(style.styleSheet) {
+		style.styleSheet.cssText = css;
+	} else {
+		while(style.firstChild) {
+			style.removeChild(style.firstChild);
+		}
+
+		style.appendChild(document.createTextNode(css));
+	}
+}
+
+function updateLink (link, options, obj) {
+	var css = obj.css;
+	var sourceMap = obj.sourceMap;
+
+	/*
+		If convertToAbsoluteUrls isn't defined, but sourcemaps are enabled
+		and there is no publicPath defined then lets turn convertToAbsoluteUrls
+		on by default.  Otherwise default to the convertToAbsoluteUrls option
+		directly
+	*/
+	var autoFixUrls = options.convertToAbsoluteUrls === undefined && sourceMap;
+
+	if (options.convertToAbsoluteUrls || autoFixUrls) {
+		css = fixUrls(css);
+	}
+
+	if (sourceMap) {
+		// http://stackoverflow.com/a/26603875
+		css += "\n/*# sourceMappingURL=data:application/json;base64," + btoa(unescape(encodeURIComponent(JSON.stringify(sourceMap)))) + " */";
+	}
+
+	var blob = new Blob([css], { type: "text/css" });
+
+	var oldSrc = link.href;
+
+	link.href = URL.createObjectURL(blob);
+
+	if(oldSrc) URL.revokeObjectURL(oldSrc);
+}
+
+
+/***/ }),
+/* 12 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+/**
+ * When source maps are enabled, `style-loader` uses a link element with a data-uri to
+ * embed the css on the page. This breaks all relative urls because now they are relative to a
+ * bundle instead of the current page.
+ *
+ * One solution is to only use full urls, but that may be impossible.
+ *
+ * Instead, this function "fixes" the relative urls to be absolute according to the current page location.
+ *
+ * A rudimentary test suite is located at `test/fixUrls.js` and can be run via the `npm test` command.
+ *
+ */
+
+module.exports = function (css) {
+	// get current location
+	var location = typeof window !== "undefined" && window.location;
+
+	if (!location) {
+		throw new Error("fixUrls requires window.location");
+	}
+
+	// blank or null?
+	if (!css || typeof css !== "string") {
+		return css;
+	}
+
+	var baseUrl = location.protocol + "//" + location.host;
+	var currentDir = baseUrl + location.pathname.replace(/\/[^\/]*$/, "/");
+
+	// convert each url(...)
+	/*
+ This regular expression is just a way to recursively match brackets within
+ a string.
+ 	 /url\s*\(  = Match on the word "url" with any whitespace after it and then a parens
+    (  = Start a capturing group
+      (?:  = Start a non-capturing group
+          [^)(]  = Match anything that isn't a parentheses
+          |  = OR
+          \(  = Match a start parentheses
+              (?:  = Start another non-capturing groups
+                  [^)(]+  = Match anything that isn't a parentheses
+                  |  = OR
+                  \(  = Match a start parentheses
+                      [^)(]*  = Match anything that isn't a parentheses
+                  \)  = Match a end parentheses
+              )  = End Group
+              *\) = Match anything and then a close parens
+          )  = Close non-capturing group
+          *  = Match anything
+       )  = Close capturing group
+  \)  = Match a close parens
+ 	 /gi  = Get all matches, not the first.  Be case insensitive.
+  */
+	var fixedCss = css.replace(/url\s*\(((?:[^)(]|\((?:[^)(]+|\([^)(]*\))*\))*)\)/gi, function (fullMatch, origUrl) {
+		// strip quotes (if they exist)
+		var unquotedOrigUrl = origUrl.trim().replace(/^"(.*)"$/, function (o, $1) {
+			return $1;
+		}).replace(/^'(.*)'$/, function (o, $1) {
+			return $1;
+		});
+
+		// already a full url? no change
+		if (/^(#|data:|http:\/\/|https:\/\/|file:\/\/\/)/i.test(unquotedOrigUrl)) {
+			return fullMatch;
+		}
+
+		// convert the url to a full url
+		var newUrl;
+
+		if (unquotedOrigUrl.indexOf("//") === 0) {
+			//TODO: should we add protocol?
+			newUrl = unquotedOrigUrl;
+		} else if (unquotedOrigUrl.indexOf("/") === 0) {
+			// path should be relative to the base url
+			newUrl = baseUrl + unquotedOrigUrl; // already starts with '/'
+		} else {
+			// path should be relative to current directory
+			newUrl = currentDir + unquotedOrigUrl.replace(/^\.\//, ""); // Strip leading './'
+		}
+
+		// send back the fixed url(...)
+		return "url(" + JSON.stringify(newUrl) + ")";
+	});
+
+	// send back the fixed css
+	return fixedCss;
+};
+
 /***/ })
 /******/ ])});;
+//# sourceMappingURL=module.js.map

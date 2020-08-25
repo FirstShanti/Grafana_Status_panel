@@ -7,7 +7,7 @@ import moment from "moment";
 // import 'jquery.flot';
 // import 'jquery.flot.pie';
 
-import './css/status_panel.scss';
+import './css/status_panel.css';
 
 // Set and populate panel defaults
 const panelDefaults = {
@@ -51,6 +51,7 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 		this.fontFormats = ['Regular', 'Bold', 'Italic'];
 		this.statusMetrics = [];
 		this.panelShapes = ['Rectangle', 'Ellipse', 'Circle'];
+		this.panelFormat = ['Default', 'Tabular'];
 
 		//Push the default status check group
 		if(!this.panel.statusGroups) {
@@ -442,8 +443,6 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 		let isStatus = false;
 		let isCheckRanges = series.thresholds.errorIsNumber && series.thresholds.warnIsNumber && series.thresholds.critIsNumber;
 
-		alert(series.alias);
-
 		if (series.hasOwnProperty('group') && series.group === this.panel.statusGroups[0]){
 			isStatus = true;
 			// this.statusMetrics.push(series);
@@ -479,7 +478,7 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 
 		// Add units-of-measure and decimal formatting or date formatting as needed
 		series.display_value = this.formatDisplayValue(series.display_value, target);
-		series.display_icon = this.getThresholdIcon(target)
+		series.display_icon = this.getThresholdIcon(target);
 
 		[series.error_tag, series.error_tags, series.error_tags_type] = this.getTag(series.display_value, target.error_tags, target.error_tags_type);
 		[series.crit_tag, series.crit_tags, series.crit_tags_type] = this.getTag(series.display_value, target.crit_tags, target.crit_tags_type);
@@ -816,7 +815,7 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 		}
 	}
 
-	getThresholdIcon() {
+	getThresholdIcon(target) {
 		if (target.warn_icon) {
 			return target.warn_icon
 		} else if (target.crit_icon) {
