@@ -127,15 +127,6 @@
 		<div class="gf-form">
 			<label class="gf-form-label width-9">Colors</label>
 			<span class="gf-form-label">
-				<color-picker color="ctrl.panel.colors.error" bs-tooltip="'Error'" onChange="ctrl.onColorChange('error')"></color-picker>
-			</span>
-			<span class="gf-form-label">
-				<color-picker color="ctrl.panel.colors.crit" bs-tooltip="'Critical'" onChange="ctrl.onColorChange('crit')"></color-picker>
-			</span>
-			<span class="gf-form-label">
-				<color-picker color="ctrl.panel.colors.warn" bs-tooltip="'Warning'" onChange="ctrl.onColorChange('warn')"></color-picker>
-			</span>
-			<span class="gf-form-label">
 				<color-picker color="ctrl.panel.colors.ok" bs-tooltip="'OK'" onChange="ctrl.onColorChange('ok')"></color-picker>
 			</span>
 			<span class="gf-form-label">
@@ -143,6 +134,29 @@
 			</span>
 		</div>
 
+	</div>
+
+	<!-- Thresholds & Statuses -->
+	<div class="section gf-form-group">
+		<h5 class="section-heading">Thresholds & Statuses</h5>
+			<div class="gf-form" ng-repeat="threshold in ctrl.panel.thresholds">
+				<label class="gf-form-label width-12">
+					<i  class="pointer fa fa-remove" ng-click="ctrl.onRemoveThreshold(threshold)"></i>
+					<span>{{ threshold.name }}</span>
+				</label>
+				<span class="gf-form-label">
+					<color-picker color="threshold.color" bs-tooltip="threshold.name" onChange="ctrl.onSetThresholdColor(threshold)"></color-picker>
+				</span>
+				<span class="shift-threshold-button" ng-click="ctrl.shiftThresholdOrder(threshold.order, -1)">up</span>
+				<span class="shift-threshold-button" ng-click="ctrl.shiftThresholdOrder(threshold.order, +1)">down</span>
+			</div>
+			<div class="gf-form" >
+				<input type="text" ng-model="ctrl.newThresholdName" class="gf-form-input max-width-10" ng-change="ctrl.onRender()">
+				<button class="btn btn-inverse" ng-click="ctrl.onAddThreshold()">
+					<i class="fa fa-plus"></i>
+					<span>Add Threshold</span>
+				</button>
+			</div>
 	</div>
 
 	<!--Other Option-->
@@ -188,6 +202,7 @@
 				</button>
 			</div>
 	</div>
+
 </div>
 
 <div>
@@ -492,17 +507,17 @@
 						  When to display the value along with the alias<br/>
 						  <strong>Never</strong> - The value will never be displayed<br/>
 						  <strong>When Alias Displayed</strong> - The value will be displayed always when alias is displayed<br/>
-						  <strong>Warning / Critical</strong> - The value will be displayed in warning or critical state<br/>
-						  <strong>Critical Only</strong> - The value will be displayed in critical only
 					  </info-popover>
 					</span>
 					<div class="gf-form-select-wrapper max-width-12">
 						<select class="gf-form-input"
-								ng-init="measurement.displayValueWithAlias = (measurement.displayValueWithAlias ? measurement.displayValueWithAlias : ctrl.displayValueTypes[0])"
 								ng-model="measurement.displayValueWithAlias"
-								ng-options="t for t in ctrl.displayValueTypes"
 								ng-change="ctrl.onRender()"
-								required></select>
+								required>
+							<option ng-repeat="option in ctrl.displayValueTypes" value="option.index" >
+								{{option.label}}
+							</option>
+						</select>
 					</div>
 				</div>
 			</div>

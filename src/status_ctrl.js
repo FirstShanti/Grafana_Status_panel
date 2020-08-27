@@ -28,7 +28,24 @@ const panelDefaults = {
 	isIgnoreOKColors: false,
 	isHideAlertsOnDisable: false,
 	cornerRadius: 0,
-	isAutoScrollOnOverflow: false
+	isAutoScrollOnOverflow: false,
+	thresholds: [
+		{
+			name: "Warning",
+			order: 0,
+			color: "rgba(250, 255, 0, 0.9)"
+		},
+		{
+			name: "Critical",
+			order: 1,
+			color: "rgba(255, 125, 0, 0.9)"
+		},
+		{
+			name: "Error",
+			order: 2,
+			color: "rgba(255, 0, 0, 0.9)"
+		},
+	]
 };
 
 export class StatusPluginCtrl extends MetricsPanelCtrl {
@@ -43,8 +60,11 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 		this.valueHandlers = ['Number Threshold', 'String Threshold', 'Date Threshold', 'Disable Criteria', 'Text Only'];
 		this.aggregations = ['Last', 'First', 'Max', 'Min', 'Sum', 'Avg', 'Delta'];
 		this.displayTypes = ['Regular', 'Annotation'];
-		this.displayAliasTypes = ['Warning / Critical / Error', 'Always'];
-		this.displayValueTypes = ['Never', 'When Alias Displayed', 'Warning / Critical / Error', 'Critical Only', 'Error only'];
+		this.displayAliasTypes = ['If not OK', 'Always'];
+		this.displayValueTypes = [
+			{label: 'Never', index: -2}, {label: 'When Alias Displayed', index: -1}, 
+			...this.getDisplayValueOptions()
+		];
 		this.displayTags = ['+/-', 'UP/DOWN', 'TRENDING/FALLING'];
 		this.displayTagsType = ['Line', 'Metric'];
 		this.colorModes = ['Panel', 'Metric', 'Disabled'];
@@ -52,6 +72,8 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 		this.statusMetrics = [];
 		this.panelShapes = ['Rectangle', 'Ellipse', 'Circle'];
 		this.panelFormat = ['Default', 'Tabular'];
+
+		this.newThresholdName = null;
 
 		//Push the default status check group
 		if(!this.panel.statusGroups) {
@@ -90,6 +112,13 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 		this.status = [];
 
 		this.addFilters()
+	}
+
+	getDisplayValueOptions() {
+		return this.panel.thresholds.map((el, i) => ({
+			label: el.name + " and higher",
+			index: i
+		}));
 	}
 
 	addFilters() {
@@ -147,6 +176,7 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 		}
 
 		this.measurements = this.panel.targets;
+		console.log("measurements", [...this.measurements]);
 
 		/** Duplicate alias validation **/
 		this.duplicates = false;
@@ -234,11 +264,52 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 	}
 
 	onColorChange(item) {
+		// useless?
 		return (color) => {
 			this.panel.colors[item] = color;
 			this.render();
 		};
 	}
+
+	onAddThreshold() {
+
+		if (!this.newThresholdName) {
+			return;
+		}
+
+		this.panel.thresholds.push({
+			name: this.newThresholdName,
+			order: this.panel.thresholds.length,
+			color: 'rgb(200, 200, 200)'
+		});
+
+		this.newThresholdName = null;
+	}
+
+	onRemoveThreshold(thresholdToDelete) {
+		this.panel.thresholds = this.panel.thresholds.filter(a => a !== thresholdToDelete);
+		this.panel.thresholds.forEach((el, index) => el.order = index);
+	}
+
+	shiftThresholdOrder(currentOrder, shift) {
+		let newOrder = currentOrder + shift;
+		if (newOrder < 0 || newOrder >= this.panel.thresholds.length) {
+			return;
+		}
+
+		this.panel.thresholds[newOrder].order = currentOrder;
+		this.panel.thresholds[currentOrder].order = newOrder;
+
+		this.panel.thresholds = this.panel.thresholds.sort((a, b) => a.order - b.order);
+	}
+
+	onSetThresholdColor(threshold) {
+		return (color) => {
+			threshold.color = color;
+			this.render();
+		};
+	}
+
 
 	onRender() {
 		this.fixPanelHeader();
@@ -266,6 +337,7 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 		this.error = [];
 		this.crit = [];
 		this.warn = [];
+		this.status = [];
 		this.statusError = [];
 		this.statusCrit = [];
 		this.statusWarn = [];
@@ -405,7 +477,7 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 
 			if (target.display != null) {
 				target.displayAliasType = target.display ? "Always" : this.displayAliasTypes[0];
-				target.displayValueWithAlias = target.display ? 'When Alias Displayed' : this.displayValueTypes[0];
+				target.displayValueWithAlias = target.display ? -1 : this.displayValueTypes[0].index;
 				delete target.display;
 			}
 		});
@@ -443,6 +515,7 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 		let isError = false;
 		let isCritical = false;
 		let isWarning = false;
+		
 		let isStatus = false;
 		let isCheckRanges = series.thresholds.errorIsNumber && series.thresholds.warnIsNumber && series.thresholds.critIsNumber;
 
@@ -489,7 +562,7 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 
 
 		var displayValueWhenAliasDisplayed = 'When Alias Displayed' === target.displayValueWithAlias;
-		var displayValueFromWarning = 'Warning / Critical / Error' === target.displayValueWithAlias;
+		var displayValueFromWarning = 'If not OK' === target.displayValueWithAlias;
 		var displayValueFromCritical = 'Critical Only' === target.displayValueWithAlias;
 		var displayValueFromError = 'Error Only' === target.displayValueWithAlias;
 
@@ -732,7 +805,6 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 
 	static parseThresholds(metricOptions) {
 		let res = {};
-
 		if (StatusPluginCtrl.isFloat(metricOptions.warn)) {
 			res.warn = parseFloat(metricOptions.warn);
 			res.warnIsNumber = true;
@@ -744,7 +816,7 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 			res.warn = metricOptions.warn;
 			res.warnIsNumber = false;
 		}
-		// console.log('metric option: ', metricOptions)
+
 		if (StatusPluginCtrl.isFloat(metricOptions.crit)) {
 			res.crit = parseFloat(metricOptions.crit);
 			res.critIsNumber = true;
@@ -765,7 +837,7 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 			res.error = metricOptions.error;
 			res.errorIsNumber = false;
 		}
-		// console.log('parseThresholds res: ', res)
+
 		return res;
 	}
 

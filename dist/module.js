@@ -121,6 +121,8 @@ __webpack_require__(8);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
+function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
@@ -148,7 +150,20 @@ var panelDefaults = {
 	isIgnoreOKColors: false,
 	isHideAlertsOnDisable: false,
 	cornerRadius: 0,
-	isAutoScrollOnOverflow: false
+	isAutoScrollOnOverflow: false,
+	thresholds: [{
+		name: "Warning",
+		order: 0,
+		color: "rgba(250, 255, 0, 0.9)"
+	}, {
+		name: "Critical",
+		order: 1,
+		color: "rgba(255, 125, 0, 0.9)"
+	}, {
+		name: "Error",
+		order: 2,
+		color: "rgba(255, 0, 0, 0.9)"
+	}]
 };
 
 var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
@@ -168,8 +183,8 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 		_this.valueHandlers = ['Number Threshold', 'String Threshold', 'Date Threshold', 'Disable Criteria', 'Text Only'];
 		_this.aggregations = ['Last', 'First', 'Max', 'Min', 'Sum', 'Avg', 'Delta'];
 		_this.displayTypes = ['Regular', 'Annotation'];
-		_this.displayAliasTypes = ['Warning / Critical / Error', 'Always'];
-		_this.displayValueTypes = ['Never', 'When Alias Displayed', 'Warning / Critical / Error', 'Critical Only', 'Error only'];
+		_this.displayAliasTypes = ['If not OK', 'Always'];
+		_this.displayValueTypes = [{ label: 'Never', index: -2 }, { label: 'When Alias Displayed', index: -1 }].concat(_toConsumableArray(_this.getDisplayValueOptions()));
 		_this.displayTags = ['+/-', 'UP/DOWN', 'TRENDING/FALLING'];
 		_this.displayTagsType = ['Line', 'Metric'];
 		_this.colorModes = ['Panel', 'Metric', 'Disabled'];
@@ -177,6 +192,8 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 		_this.statusMetrics = [];
 		_this.panelShapes = ['Rectangle', 'Ellipse', 'Circle'];
 		_this.panelFormat = ['Default', 'Tabular'];
+
+		_this.newThresholdName = null;
 
 		//Push the default status check group
 		if (!_this.panel.statusGroups) {
@@ -219,6 +236,16 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 	}
 
 	_createClass(StatusPluginCtrl, [{
+		key: "getDisplayValueOptions",
+		value: function getDisplayValueOptions() {
+			return this.panel.thresholds.map(function (el, i) {
+				return {
+					label: el.name + " and higher",
+					index: i
+				};
+			});
+		}
+	}, {
 		key: "addFilters",
 		value: function addFilters() {
 			var _this2 = this;
@@ -280,6 +307,7 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 			}
 
 			this.measurements = this.panel.targets;
+			console.log("measurements", [].concat(_toConsumableArray(this.measurements)));
 
 			/** Duplicate alias validation **/
 			this.duplicates = false;
@@ -385,15 +413,67 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 		value: function onColorChange(item) {
 			var _this4 = this;
 
+			// useless?
 			return function (color) {
 				_this4.panel.colors[item] = color;
 				_this4.render();
 			};
 		}
 	}, {
+		key: "onAddThreshold",
+		value: function onAddThreshold() {
+
+			if (!this.newThresholdName) {
+				return;
+			}
+
+			this.panel.thresholds.push({
+				name: this.newThresholdName,
+				order: this.panel.thresholds.length,
+				color: 'rgb(200, 200, 200)'
+			});
+
+			this.newThresholdName = null;
+		}
+	}, {
+		key: "onRemoveThreshold",
+		value: function onRemoveThreshold(thresholdToDelete) {
+			this.panel.thresholds = this.panel.thresholds.filter(function (a) {
+				return a !== thresholdToDelete;
+			});
+			this.panel.thresholds.forEach(function (el, index) {
+				return el.order = index;
+			});
+		}
+	}, {
+		key: "shiftThresholdOrder",
+		value: function shiftThresholdOrder(currentOrder, shift) {
+			var newOrder = currentOrder + shift;
+			if (newOrder < 0 || newOrder >= this.panel.thresholds.length) {
+				return;
+			}
+
+			this.panel.thresholds[newOrder].order = currentOrder;
+			this.panel.thresholds[currentOrder].order = newOrder;
+
+			this.panel.thresholds = this.panel.thresholds.sort(function (a, b) {
+				return a.order - b.order;
+			});
+		}
+	}, {
+		key: "onSetThresholdColor",
+		value: function onSetThresholdColor(threshold) {
+			var _this5 = this;
+
+			return function (color) {
+				threshold.color = color;
+				_this5.render();
+			};
+		}
+	}, {
 		key: "onRender",
 		value: function onRender() {
-			var _this5 = this;
+			var _this6 = this;
 
 			this.fixPanelHeader();
 			this.setElementHeight();
@@ -417,6 +497,7 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 			this.error = [];
 			this.crit = [];
 			this.warn = [];
+			this.status = [];
 			this.statusError = [];
 			this.statusCrit = [];
 			this.statusWarn = [];
@@ -433,9 +514,9 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 			if (this.panel.statusGroups) {
 				var statusGroupExists = false;
 				this.panel.statusGroups.forEach(function (element) {
-					_this5.groupError[element.name] = [];
-					_this5.groupCrit[element.name] = [];
-					_this5.groupWarn[element.name] = [];
+					_this6.groupError[element.name] = [];
+					_this6.groupCrit[element.name] = [];
+					_this6.groupWarn[element.name] = [];
 					if (element.name === 'Status Checks') {
 						statusGroupExists = true;
 					}
@@ -459,8 +540,8 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 				s.isDisplayValue = true;
 				s.displayType = target.displayType;
 				s.valueDisplayRegex = "";
-				if (_this5.panel.statusGroups) {
-					_this5.panel.statusGroups.forEach(function (element) {
+				if (_this6.panel.statusGroups) {
+					_this6.panel.statusGroups.forEach(function (element) {
 						if (target.hasOwnProperty('group') && element.name === target.group.name) {
 							s.group = element;
 						}
@@ -468,7 +549,7 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 				}
 				// s.group = target.group;
 
-				if (_this5.validateRegex(target.valueDisplayRegex)) {
+				if (_this6.validateRegex(target.valueDisplayRegex)) {
 					s.valueDisplayRegex = target.valueDisplayRegex;
 				}
 
@@ -510,11 +591,11 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 				s.display_value = value;
 
 				if (target.valueHandler == "Number Threshold" || target.valueHandler == "String Threshold" || target.valueHandler == "Date Threshold") {
-					_this5.handleThresholdStatus(s, target);
+					_this6.handleThresholdStatus(s, target);
 				} else if (target.valueHandler == "Disable Criteria") {
-					_this5.handleDisabledStatus(s, target);
+					_this6.handleDisabledStatus(s, target);
 				} else if (target.valueHandler == "Text Only") {
-					_this5.handleTextOnly(s, target);
+					_this6.handleTextOnly(s, target);
 				}
 
 				// this.statusMetrics.push(s.alias)
@@ -541,7 +622,7 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 	}, {
 		key: "upgradeOldVersion",
 		value: function upgradeOldVersion() {
-			var _this6 = this;
+			var _this7 = this;
 
 			var targets = this.panel.targets;
 
@@ -554,14 +635,14 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 							target.valueHandler = "Text Only";
 						}
 					} else {
-						target.valueHandler = _this6.valueHandlers[0];
+						target.valueHandler = _this7.valueHandlers[0];
 					}
-					target.displayType = _this6.displayTypes[0];
+					target.displayType = _this7.displayTypes[0];
 				}
 
 				if (target.display != null) {
-					target.displayAliasType = target.display ? "Always" : _this6.displayAliasTypes[0];
-					target.displayValueWithAlias = target.display ? 'When Alias Displayed' : _this6.displayValueTypes[0];
+					target.displayAliasType = target.display ? "Always" : _this7.displayAliasTypes[0];
+					target.displayValueWithAlias = target.display ? -1 : _this7.displayValueTypes[0].index;
 					delete target.display;
 				}
 			});
@@ -600,6 +681,7 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 			var isError = false;
 			var isCritical = false;
 			var isWarning = false;
+
 			var isStatus = false;
 			var isCheckRanges = series.thresholds.errorIsNumber && series.thresholds.warnIsNumber && series.thresholds.critIsNumber;
 
@@ -666,7 +748,7 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 
 
 			var displayValueWhenAliasDisplayed = 'When Alias Displayed' === target.displayValueWithAlias;
-			var displayValueFromWarning = 'Warning / Critical / Error' === target.displayValueWithAlias;
+			var displayValueFromWarning = 'If not OK' === target.displayValueWithAlias;
 			var displayValueFromCritical = 'Critical Only' === target.displayValueWithAlias;
 			var displayValueFromError = 'Error Only' === target.displayValueWithAlias;
 
@@ -869,17 +951,17 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 	}, {
 		key: "handleMaxAlertsToShow",
 		value: function handleMaxAlertsToShow() {
-			var _this7 = this;
+			var _this8 = this;
 
 			if (this.panel.maxAlertNumber != null && this.panel.maxAlertNumber >= 0) {
 				var currentMaxAllowedAlerts = this.panel.maxAlertNumber;
 				var filteredOutAlerts = 0;
 				var arrayNamesToSlice = ["disabled",, "error", "crit", "warn", "display"];
 				arrayNamesToSlice.forEach(function (arrayName) {
-					var originAlertCount = _this7[arrayName].length;
-					_this7[arrayName] = _this7[arrayName].slice(0, currentMaxAllowedAlerts);
-					currentMaxAllowedAlerts = Math.max(currentMaxAllowedAlerts - _this7[arrayName].length, 0);
-					filteredOutAlerts += originAlertCount - _this7[arrayName].length;
+					var originAlertCount = _this8[arrayName].length;
+					_this8[arrayName] = _this8[arrayName].slice(0, currentMaxAllowedAlerts);
+					currentMaxAllowedAlerts = Math.max(currentMaxAllowedAlerts - _this8[arrayName].length, 0);
+					filteredOutAlerts += originAlertCount - _this8[arrayName].length;
 				});
 
 				if (filteredOutAlerts > 0) {
@@ -947,14 +1029,14 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 	}, {
 		key: "autoFlip",
 		value: function autoFlip() {
-			var _this8 = this;
+			var _this9 = this;
 
 			if (this.timeoutId) {
 				clearInterval(this.timeoutId);
 			}
 			if (this.panel.flipCard && (this.error.length > 0 || this.crit.length > 0 || this.warn.length > 0 || this.disabled.length > 0)) {
 				this.timeoutId = setInterval(function () {
-					_this8.$panelContainer.toggleClass("flipped");
+					_this9.$panelContainer.toggleClass("flipped");
 				}, this.panel.flipTime * 1000);
 			}
 		}
@@ -981,12 +1063,12 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 	}, {
 		key: "addGroup",
 		value: function addGroup() {
-			var _this9 = this;
+			var _this10 = this;
 
 			if (this.panel.groupname) {
 				var duplicate = false;
 				this.panel.statusGroups.forEach(function (element) {
-					if (element.name === _this9.panel.groupname) {
+					if (element.name === _this10.panel.groupname) {
 						duplicate = true;
 					}
 				});
@@ -1012,7 +1094,6 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 		key: "parseThresholds",
 		value: function parseThresholds(metricOptions) {
 			var res = {};
-
 			if (StatusPluginCtrl.isFloat(metricOptions.warn)) {
 				res.warn = parseFloat(metricOptions.warn);
 				res.warnIsNumber = true;
@@ -1024,7 +1105,7 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 				res.warn = metricOptions.warn;
 				res.warnIsNumber = false;
 			}
-			// console.log('metric option: ', metricOptions)
+
 			if (StatusPluginCtrl.isFloat(metricOptions.crit)) {
 				res.crit = parseFloat(metricOptions.crit);
 				res.critIsNumber = true;
@@ -1045,7 +1126,7 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 				res.error = metricOptions.error;
 				res.errorIsNumber = false;
 			}
-			// console.log('parseThresholds res: ', res)
+
 			return res;
 		}
 	}, {
@@ -1167,7 +1248,7 @@ if(false) {
 
 exports = module.exports = __webpack_require__(10)(false);
 // Module
-exports.push([module.i, ".status-panel {\n\toverflow: hidden;\n\tposition: relative;\n\twidth: 100%;\n\theight: 100%;\n\t/*text-align: center;*/\n\twidth: -moz-fit-content;\n\ttext-align: left;\n\tmargin-left: auto;\n\tmargin-right: auto;\n  }\n  .status-panel h1 {\n\tfont-size: 1.5rem;\n  }\n  .status-panel .st-card-front {\n\tposition: absolute;\n\twidth: 100%;\n\theight: 100%;\n\tdisplay: flex;\n\tflex-direction: column;\n\tjustify-content: center;\n\talign-content: center;\n  }\n  .status-panel .st-card-back {\n\tposition: relative;\n\tdisplay: flex;\n\tjustify-content: space-between;\n\tflex-direction: column;\n  }\n  .status-panel .st-card-back .top_section .status-panel-annotation_row {\n\ttext-align: left;\n\tfont-size: 0.85rem;\n  }\n  .status-panel .st-card-back .top_section .status-panel-annotation_row .row-overflow {\n\tmax-width: 150px;\n\toverflow: hidden;\n\ttext-overflow: ellipsis;\n\twhite-space: nowrap;\n  }\n  .status-panel .st-card-back .bottom_section {\n\tdisplay: flex;\n\tflex-direction: column;\n\tjustify-content: center;\n\talign-content: center;\n  }\n  .status-panel .st-card-back .bottom_section .status_alerts_row {\n\tmin-height: 1px;\n  }\n  .status-panel .st-card-back .bottom_section .status_alerts_row .status_extra_alerts {\n\tpadding-top: 2px;\n\tfont-size: 0.85rem;\n  }\n  .status-panel .st-card-back .center_content_hidden_section {\n\tmin-height: 1px;\n  }\n  .status-panel .st-card-front,\n  .status-panel .st-card-back {\n\tbackface-visibility: hidden;\n\ttransition: transform 0.5s;\n  }\n  \n  .marquee_container {\n\toverflow: hidden;\n  }\n  .marquee_container .marquee_element {\n\tbackface-visibility: hidden;\n\ttransition: transform 0.5s;\n\tdisplay: inline-block;\n\tanimation: marquee_container 15s linear infinite;\n  }\n  .marquee_container .marquee_element:hover {\n\tanimation-play-state: paused;\n  }\n  \n  /* Make it move */\n  @keyframes marquee_container {\n\t0% {\n\t  transform: translate(0, 100%);\n\t}\n\t100% {\n\t  transform: translate(0, -100%);\n\t}\n  }\n  .st-card-front .ok-text, .st-card-front .warning-text, .st-card-front .fail-text, .st-card-front .no-data-text, .st-card-front .disabled-text {\n\tdisplay: none;\n\tfont-size: 2rem;\n  }\n  \n  .ok-state .ok-text {\n\tdisplay: block;\n  }\n  \n  .warn-state .warning-text {\n\tdisplay: block;\n  }\n  \n  .error-state .fail-text {\n\tdisplay: block;\n  }\n  \n  .no-data-state .no-data-text {\n\tdisplay: block;\n  }\n  \n  .disabled-state .disabled-text {\n\tdisplay: block;\n  }\n  \n  .st-card.effect-hover .st-card-back {\n\t-webkit-transform: rotateY(-180deg);\n\ttransform: rotateY(-180deg);\n  }\n  \n  .st-card.effect-hover:hover .st-card-front, .st-card.effect-hover.flipped .st-card-front {\n\t-webkit-transform: rotateY(-180deg);\n\ttransform: rotateY(-180deg);\n  }\n  \n  .st-card.effect-hover:hover .st-card-back, .st-card.effect-hover.flipped .st-card-back {\n\t-webkit-transform: rotateY(0);\n\ttransform: rotateY(0);\n  }\n  \n  .st-card:not(.effect-hover) .st-card-front {\n\tdisplay: none;\n  }\n  \n  .boldAlertMetric {\n\tfont-weight: bold;\n  }\n  \n  .italicAlertMetric {\n\tfont-style: italic;\n  }\n  \n  .example-container {\n\theight: auto;\n\twidth: auto;\n\toverflow: auto;\n  }\n  \n  table {\n\twidth: auto;\n\tborder: 1px solid #080808;\n\tborder-collapse: collapse !important;\n  }\n  \n  td.icon {\n  /*  width: 21px;\n\twidth: fit-content;*/\n\twidth: auto;\n\tborder-right: 1px solid #080808;\n\tpadding: 5px;\n  }\n  \n  td.name {\n\twidth: 200px !important;\n\t/*width: fit-content;*/\n\tborder-right: 1px solid #080808;\n\tpadding: 5px;\n  }\n  \n  td.value {\n\twidth: 150px;\n\tpadding: 5px;\n  }\n  \n  td.mat-column-star {\n\twidth: 20px;\n\tpadding-right: 8px;\n  }\n  \n  th.mat-column-position, td.mat-column-position {\n\tpadding-left: 8px;\n  }\n  \n  img.icon {\n\twidth: 21px;\n\theight: 21px;\n  }", ""]);
+exports.push([module.i, ".status-panel {\n\toverflow: hidden;\n\tposition: relative;\n\twidth: 100%;\n\theight: 100%;\n\t/*text-align: center;*/\n\twidth: -moz-fit-content;\n\ttext-align: left;\n\tmargin-left: auto;\n\tmargin-right: auto;\n  }\n  .status-panel h1 {\n\tfont-size: 1.5rem;\n  }\n  .status-panel .st-card-front {\n\tposition: absolute;\n\twidth: 100%;\n\theight: 100%;\n\tdisplay: flex;\n\tflex-direction: column;\n\tjustify-content: center;\n\talign-content: center;\n  }\n  .status-panel .st-card-back {\n\tposition: relative;\n\tdisplay: flex;\n\tjustify-content: space-between;\n\tflex-direction: column;\n  }\n  .status-panel .st-card-back .top_section .status-panel-annotation_row {\n\ttext-align: left;\n\tfont-size: 0.85rem;\n  }\n  .status-panel .st-card-back .top_section .status-panel-annotation_row .row-overflow {\n\tmax-width: 150px;\n\toverflow: hidden;\n\ttext-overflow: ellipsis;\n\twhite-space: nowrap;\n  }\n  .status-panel .st-card-back .bottom_section {\n\tdisplay: flex;\n\tflex-direction: column;\n\tjustify-content: center;\n\talign-content: center;\n  }\n  .status-panel .st-card-back .bottom_section .status_alerts_row {\n\tmin-height: 1px;\n  }\n  .status-panel .st-card-back .bottom_section .status_alerts_row .status_extra_alerts {\n\tpadding-top: 2px;\n\tfont-size: 0.85rem;\n  }\n  .status-panel .st-card-back .center_content_hidden_section {\n\tmin-height: 1px;\n  }\n  .status-panel .st-card-front,\n  .status-panel .st-card-back {\n\tbackface-visibility: hidden;\n\ttransition: transform 0.5s;\n  }\n  \n  .marquee_container {\n\toverflow: hidden;\n  }\n  .marquee_container .marquee_element {\n\tbackface-visibility: hidden;\n\ttransition: transform 0.5s;\n\tdisplay: inline-block;\n\tanimation: marquee_container 15s linear infinite;\n  }\n  .marquee_container .marquee_element:hover {\n\tanimation-play-state: paused;\n  }\n  \n  /* Make it move */\n  @keyframes marquee_container {\n\t0% {\n\t  transform: translate(0, 100%);\n\t}\n\t100% {\n\t  transform: translate(0, -100%);\n\t}\n  }\n  .st-card-front .ok-text, .st-card-front .warning-text, .st-card-front .fail-text, .st-card-front .no-data-text, .st-card-front .disabled-text {\n\tdisplay: none;\n\tfont-size: 2rem;\n  }\n  \n  .ok-state .ok-text {\n\tdisplay: block;\n  }\n  \n  .warn-state .warning-text {\n\tdisplay: block;\n  }\n  \n  .error-state .fail-text {\n\tdisplay: block;\n  }\n  \n  .no-data-state .no-data-text {\n\tdisplay: block;\n  }\n  \n  .disabled-state .disabled-text {\n\tdisplay: block;\n  }\n  \n  .st-card.effect-hover .st-card-back {\n\t-webkit-transform: rotateY(-180deg);\n\ttransform: rotateY(-180deg);\n  }\n  \n  .st-card.effect-hover:hover .st-card-front, .st-card.effect-hover.flipped .st-card-front {\n\t-webkit-transform: rotateY(-180deg);\n\ttransform: rotateY(-180deg);\n  }\n  \n  .st-card.effect-hover:hover .st-card-back, .st-card.effect-hover.flipped .st-card-back {\n\t-webkit-transform: rotateY(0);\n\ttransform: rotateY(0);\n  }\n  \n  .st-card:not(.effect-hover) .st-card-front {\n\tdisplay: none;\n  }\n  \n  .boldAlertMetric {\n\tfont-weight: bold;\n  }\n  \n  .italicAlertMetric {\n\tfont-style: italic;\n  }\n  \n  .example-container {\n\theight: auto;\n\twidth: auto;\n\toverflow: auto;\n  }\n  \n  table {\n\twidth: auto;\n\tborder: 1px solid #080808;\n\tborder-collapse: collapse !important;\n  }\n  \n  td.icon {\n  /*  width: 21px;\n\twidth: fit-content;*/\n\twidth: auto;\n\tborder-right: 1px solid #080808;\n\tpadding: 5px;\n  }\n  \n  td.name {\n\twidth: 200px !important;\n\t/*width: fit-content;*/\n\tborder-right: 1px solid #080808;\n\tpadding: 5px;\n  }\n  \n  td.value {\n\twidth: 150px;\n\tpadding: 5px;\n  }\n  \n  td.mat-column-star {\n\twidth: 20px;\n\tpadding-right: 8px;\n  }\n  \n  th.mat-column-position, td.mat-column-position {\n\tpadding-left: 8px;\n  }\n  \n  img.icon {\n\twidth: 21px;\n\theight: 21px;\n  }\n\n\n  .shift-threshold-button {\n\tmargin-left: 10px;\n\tfont-weight: 600;\n\tfont-size: 16px;\n\tcursor: pointer;\n  }", ""]);
 
 
 /***/ }),
