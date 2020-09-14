@@ -49,26 +49,17 @@
 					</div>
 					   
 					<div ng-style="ctrl.panel.colorMode === 'Metric' && {'color':ctrl.panel.colors.ok}"
-						ng-class="{'boldAlertMetric': ctrl.panel.fontFormat === 'Bold', 'italicAlertMetric': ctrl.panel.fontFormat === 'Italic'} " ng-if="ctrl.statusCrit.length > 0">
-						<img src="https://hds.static.autodesk.com/images/table-status-worst.svg" alt="Critical">
-						<a ng-if="ctrl.statusCrit[0].group.alias && ctrl.statusCrit[0].group.url" ng-href="{{ ctrl.statusCrit[0].group.url | interpolateTemplateVars:this }}" target="_blank" >{{ ctrl.formatAlias(ctrl.statusCrit[0].group.alias, ctrl.statusCrit.length, 'critical') }}</a>
-						<a ng-if="!ctrl.statusCrit[0].group.alias && ctrl.statusCrit[0].group.url" ng-href="{{ ctrl.statusCrit[0].group.url | interpolateTemplateVars:this }}" target="_blank" >{{ ctrl.statusCrit.length }} {{ctrl.statusCrit[0].group.name}} critical</a>
-						<a ng-if="ctrl.statusCrit[0].group.alias && !ctrl.statusCrit[0].group.url" ng-href="{{ ctrl.statusCrit[0].url | interpolateTemplateVars:this }}" target="_blank" >{{ ctrl.formatAlias(ctrl.statusCrit[0].group.alias, ctrl.statusCrit.length, 'critical') }}</a>
-						<a ng-if="!ctrl.statusCrit[0].group.alias && !ctrl.statusCrit[0].group.url" ng-href="{{ ctrl.statusCrit[0].url | interpolateTemplateVars:this }}" target="_blank" >{{ ctrl.statusCrit.length }} {{ctrl.statusCrit[0].group.name}} critical</a>
+						ng-class="{'boldAlertMetric': ctrl.panel.fontFormat === 'Bold', 'italicAlertMetric': ctrl.panel.fontFormat === 'Italic'} " ng-repeat="(statusName, series) in ctrl.groupedTriggeredStatuses">
+						<img src="{{ctrl.getFirstNotNullIcon(series, ctrl.DEFAULT_ERROR_STATUS_ICON)}}" alt="{{statusName}}">
+						<a ng-if="series[0].group.alias && series[0].group.url" ng-href="{{ series[0].group.url | interpolateTemplateVars:this }}" target="_blank" >{{ ctrl.formatAlias(series[0].group.alias, series.length, statusName) }}</a>
+						<a ng-if="!series[0].group.alias && series[0].group.url" ng-href="{{ series[0].group.url | interpolateTemplateVars:this }}" target="_blank" >{{ series.length }} {{series[0].group.name}} {{statusName}}</a>
+						<a ng-if="series[0].group.alias && !series[0].group.url" ng-href="{{ series[0].url | interpolateTemplateVars:this }}" target="_blank" >{{ ctrl.formatAlias(series[0].group.alias, series.length, statusName) }}</a>
+						<a ng-if="!series[0].group.alias && !series[0].group.url" ng-href="{{ series[0].url | interpolateTemplateVars:this }}" target="_blank" >{{ series.length }} {{series[0].group.name}} {{statusName}}</a>
 					</div>
 
 					<div ng-style="ctrl.panel.colorMode === 'Metric' && {'color':ctrl.panel.colors.ok}"
-						ng-class="{'boldAlertMetric': ctrl.panel.fontFormat === 'Bold', 'italicAlertMetric': ctrl.panel.fontFormat === 'Italic'} " ng-if="ctrl.statusWarn.length > 0 && ctrl.statusCrit.length === 0">
-						<img src="https://hds.static.autodesk.com/images/table-status-bad.svg" alt="Warning">
-						<a ng-if="ctrl.statusWarn[0].group.alias && ctrl.statusWarn[0].group.url" ng-href="{{ ctrl.statusWarn[0].group.url | interpolateTemplateVars:this }}" target="_blank" >{{ ctrl.formatAlias(ctrl.statusWarn[0].group.alias, ctrl.statusWarn.length, 'warning') }}</a>
-						<a ng-if="!ctrl.statusWarn[0].group.alias && ctrl.statusWarn[0].group.url" ng-href="{{ ctrl.statusWarn[0].group.url | interpolateTemplateVars:this }}" target="_blank" >{{ ctrl.statusWarn.length }} {{ ctrl.statusWarn[0].group.name }} degraded</a>
-						<a ng-if="ctrl.statusWarn[0].group.alias && !ctrl.statusWarn[0].group.url" ng-href="{{ ctrl.statusWarn[0].url | interpolateTemplateVars:this }}" target="_blank" >{{ ctrl.formatAlias(ctrl.statusWarn[0].group.alias, ctrl.statusWarn.length, 'warning') }}</a>
-						<a ng-if="!ctrl.statusWarn[0].group.alias && !ctrl.statusWarn[0].group.url" ng-href="{{ ctrl.statusWarn[0].url | interpolateTemplateVars:this }}" target="_blank" >{{ ctrl.statusWarn.length }} {{ ctrl.statusWarn[0].group.name }} degraded</a>
-					</div>
-
-					<div ng-style="ctrl.panel.colorMode === 'Metric' && {'color':ctrl.panel.colors.ok}"
-					   ng-class="{'boldAlertMetric': ctrl.panel.fontFormat === 'Bold', 'italicAlertMetric': ctrl.panel.fontFormat === 'Italic'} " ng-if="ctrl.statusMetrics.length > 0 && ctrl.statusWarn.length === 0 && ctrl.statusCrit.length === 0">
-					   <img src="https://hds.static.autodesk.com/images/table-status-good.svg" alt="Good">
+					   ng-class="{'boldAlertMetric': ctrl.panel.fontFormat === 'Bold', 'italicAlertMetric': ctrl.panel.fontFormat === 'Italic'} " ng-if="ctrl.statusMetrics.length > 0 && ctrl.triggeredStatuses.length === 0">
+					   <img src="{{ctrl.getFirstNotNullIcon(series, ctrl.DEFAULT_OR_STATUS_ICON)}}" alt="Good">
 					   <a ng-if="ctrl.statusMetrics[0].group.alias && ctrl.statusMetrics[0].group.url" ng-href="{{ ctrl.statusMetrics[0].group.url | interpolateTemplateVars:this }}" target="_blank" >{{ ctrl.formatAlias(ctrl.statusMetrics[0].group.alias, ctrl.statusMetrics.length, 'ok') }}</a>
 					   <a ng-if="!ctrl.statusMetrics[0].group.alias && ctrl.statusMetrics[0].group.url" ng-href="{{ ctrl.statusMetrics[0].group.url | interpolateTemplateVars:this }}" target="_blank" >{{ ctrl.statusMetrics.length }} {{ ctrl.statusMetrics[0].group.name }} ok</a>
 					   <a ng-if="ctrl.statusMetrics[0].group.alias && !ctrl.statusMetrics[0].group.url" ng-href="{{ ctrl.statusMetrics[0].url | interpolateTemplateVars:this }}" target="_blank" >{{ ctrl.formatAlias(ctrl.statusMetrics[0].group.alias, ctrl.statusMetrics.length, 'ok') }}</a>
@@ -78,48 +69,18 @@
 
 					<!-- GROUP HANDLING -->
 
-					<div ng-style="ctrl.panel.colorMode === 'Metric' && {'color':ctrl.panel.colors.error}"
-						ng-class="{'boldAlertMetric': ctrl.panel.fontFormat === 'Bold', 'italicAlertMetric': ctrl.panel.fontFormat === 'Italic'}" ng-repeat="(group, metrics) in ctrl.groupError">
-						<img ng-if="ctrl.panel.iconSwitch && metrics[0].display_icon && ((metrics[0].error_tags_type == 'Metric' || !metrics[0].error_tag) || (metrics[0].error_tags_type == 'Line' && !metrics[0].error_tag))" ng-show="metrics[0].display_icon" alt="error" src="{{metrics[0].display_icon}}">
-						<img ng-if="ctrl.panel.iconSwitch && !metrics[0].display_icon && metrics.length && ((metrics[0].error_tags_type == 'Metric' || !metrics[0].error_tag) || (metrics[0].error_tags_type == 'Line' && !metrics[0].error_tag))" src="https://icons.iconarchive.com/icons/paomedia/small-n-flat/24/sign-error-icon.png">
-						<span ng-if="metrics[0].error_tag && metrics[0].error_tags_type === 'Line'" ng-show="metrics[0].error_tag">{{ metrics[0].error_tag }}</span>
-						<a ng-if="metrics.length > 0 && metrics[0].group.url && metrics[0].group.alias" ng-href="{{ metrics[0].group.url | interpolateTemplateVars:this }}" target="_blank" >{{ ctrl.formatAlias(metrics[0].group.alias, metrics.length, 'error') }}</a>
-						<a ng-if="metrics.length > 0 && !metrics[0].group.url && metrics[0].group.alias" ng-href="{{ ctrl.error[0].url | interpolateTemplateVars:this }}" target="_blank" >{{ ctrl.formatAlias(metrics[0].group.alias, metrics.length, 'error') }}</a>
+					<div ng-style="ctrl.panel.colorMode === 'Metric' && {'color': ctrl.getColorByThresholdName(ctrl.getStatusWithGreatedOrder(metrics).name)}"
+						ng-class="{'boldAlertMetric': ctrl.panel.fontFormat === 'Bold', 'italicAlertMetric': ctrl.panel.fontFormat === 'Italic'}" ng-repeat="(group, metrics) in ctrl.groupTriggeredThresholds">
+						<img ng-if="ctrl.panel.iconSwitch && metrics[0].display_icon && ((metrics[0].tags_type == 'Metric' || !metrics[0].tag) || (metrics[0].tags_type == 'Line' && !metrics[0].tag))" ng-show="metrics[0].display_icon" alt="error" src="{{ctrl.getStatusWithGreatedOrder(metrics).icon}}">
+						<img ng-if="ctrl.panel.iconSwitch && !metrics[0].display_icon && metrics.length && ((metrics[0].tags_type == 'Metric' || !metrics[0].tag) || (metrics[0].tags_type == 'Line' && !metrics[0].tag))" src="https://icons.iconarchive.com/icons/paomedia/small-n-flat/24/sign-error-icon.png">
+						<span ng-if="metrics[0].tag && metrics[0].tags_type === 'Line'" ng-show="metrics[0].tag">{{ metrics[0].tag }}</span>
+						<a ng-if="metrics.length > 0 && metrics[0].group.url && metrics[0].group.alias" ng-href="{{ metrics[0].group.url | interpolateTemplateVars:this }}" target="_blank" >{{ ctrl.formatAlias(metrics[0].group.alias, metrics.length, ctrl.getStatusWithGreatedOrder(metrics).name) }}</a>
+						<a ng-if="metrics.length > 0 && !metrics[0].group.url && metrics[0].group.alias" ng-href="{{ ctrl.error[0].url | interpolateTemplateVars:this }}" target="_blank" >{{ ctrl.formatAlias(metrics[0].group.alias, metrics.length, ctrl.getStatusWithGreatedOrder(metrics).name) }}</a>
 						<a ng-if="metrics.length > 0 && metrics[0].group.url && !metrics[0].group.alias" ng-href="{{ metrics[0].group.url | interpolateTemplateVars:this }}" target="_blank" >{{ metrics.length }}: {{ metrics[0].group.name }}</a>
 						<a ng-if="metrics.length > 0 && !metrics[0].group.url && !metrics[0].group.alias" ng-href="{{ ctrl.error[0].url | interpolateTemplateVars:this }}" target="_blank" >{{ metrics.length }}: {{ metrics[0].group.name }}</a>
-						<span ng-if="metrics[0].error_tag && metrics[0].error_tags_type === 'Metric'" ng-show="metrics[0].error_tag">{{ metrics[0].error_tag }}</span>
+						<span ng-if="metrics[0].tag && metrics[0].tags_type === 'Metric'" ng-show="metrics[0].tag">{{ metrics[0].tag }}</span>
 						<span ng-if="metrics.length && metrics[0].isDisplayValue" >{{ metrics[0].display_value | numberOrTextWithRegex : display.valueDisplayRegex }}</span>
 					</div>
-
-					<div ng-style="ctrl.panel.colorMode === 'Metric' && {'color':ctrl.panel.colors.crit}"
-						ng-class="{'boldAlertMetric': ctrl.panel.fontFormat === 'Bold', 'italicAlertMetric': ctrl.panel.fontFormat === 'Italic'}" ng-repeat="(group, metrics) in ctrl.groupCrit">
-						<img ng-if="ctrl.panel.iconSwitch && metrics[0].display_icon && ((metrics[0].crit_tags_type == 'Metric' || !metrics[0].crit_tag) || (metrics[0].crit_tags_type == 'Line' && !metrics[0].crit_tag))" ng-show="metrics[0].display_icon" alt="crit" src="{{metrics[0].display_icon}}">
-						<img ng-if="ctrl.panel.iconSwitch && !metrics[0].display_icon && metrics.length && ((metrics[0].crit_tags_type == 'Metric' || !metrics[0].crit_tag) || (metrics[0].crit_tags_type == 'Line' && !metrics[0].crit_tag))" src="https://icons.iconarchive.com/icons/custom-icon-design/flatastic-9/24/Warning-icon.png">
-						<span ng-if="metrics[0].crit_tag && metrics[0].crit_tags_type === 'Line'" ng-show="metrics[0].crit_tag">{{ metrics[0].crit_tag }}</span>
-						<!-- <img ng-if="metrics[0].display_icon" ng-show="metrics[0].display_icon" alt="critical" src="{{metrics[0].display_icon}}" />
-						<img ng-if="!metrics[0].display_icon && metrics.length" ng-show="!metrics[0].display_icon" src='https://hds.static.autodesk.com/images/table-status-worst.svg' > -->
-						<a ng-if="metrics.length > 0 && metrics[0].group.url && metrics[0].group.alias" ng-href="{{ metrics[0].group.url | interpolateTemplateVars:this }}" target="_blank" >{{ ctrl.formatAlias(metrics[0].group.alias, metrics.length, 'critical') }}</a>
-						<a ng-if="metrics.length > 0 && !metrics[0].group.url && metrics[0].group.alias" ng-href="{{ ctrl.crit[0].url | interpolateTemplateVars:this }}" target="_blank" >{{ ctrl.formatAlias(metrics[0].group.alias, metrics.length, 'critical') }}</a>
-						<a ng-if="metrics.length > 0 && metrics[0].group.url && !metrics[0].group.alias" ng-href="{{ metrics[0].group.url | interpolateTemplateVars:this }}" target="_blank" >{{ metrics.length }}: {{ metrics[0].group.name }}</a>
-						<a ng-if="metrics.length > 0 && !metrics[0].group.url && !metrics[0].group.alias" ng-href="{{ ctrl.crit[0].url | interpolateTemplateVars:this }}" target="_blank" >{{ metrics.length }}: {{ metrics[0].group.name }}</a>
-						<span ng-if="metrics[0].crit_tag && metrics[0].crit_tags_type === 'Metric'" ng-show="metrics[0].crit_tag">{{ metrics[0].crit_tag }}</span>
-						<span ng-if="metrics.length && metrics[0].isDisplayValue" >{{ metrics[0].display_value | numberOrTextWithRegex : display.valueDisplayRegex }}</span>
-					</div>
-					   
-					<div ng-style="ctrl.panel.colorMode === 'Metric' && {'color':ctrl.panel.colors.warn}"
-						ng-class="{'boldAlertMetric': ctrl.panel.fontFormat === 'Bold', 'italicAlertMetric': ctrl.panel.fontFormat === 'Italic'}" ng-repeat="(group, metrics) in ctrl.groupWarn">
-						<img ng-if="ctrl.panel.iconSwitch && metrics[0].display_icon && ((metrics[0].warn_tags_type == 'Metric' || !metrics[0].warn_tag) || (metrics[0].warn_tags_type == 'Line' && !metrics[0].warn_tag))" ng-show="metrics[0].display_icon" alt="warn" src="{{metrics[0].display_icon}}">
-						<img ng-if="ctrl.panel.iconSwitch && !metrics[0].display_icon && metrics.length && ((metrics[0].warn_tags_type == 'Metric' || !metrics[0].warn_tag) || (metrics[0].warn_tags_type == 'Line' && !metrics[0].warn_tag))" src="https://hds.static.autodesk.com/images/table-status-bad.svg">
-						<span ng-if="metrics[0].warn_tag && metrics[0].warn_tags_type === 'Line'" ng-show="metrics[0].warn_tag">{{ metrics[0].warn_tag }}</span>
-						<!-- <img ng-if="metrics[0].display_icon" ng-show="metrics[0].display_icon" alt="warning" src="{{metrics[0].display_icon}}" /> 
-						<img ng-if="!metrics[0].diplay_icon && metrics.length" ng-show="!metrics[0].display_icon" src="https://hds.static.autodesk.com/images/table-status-bad.svg"> -->
-						<a ng-if="metrics.length > 0 && metrics[0].group.url && metrics[0].group.alias" ng-href="{{ metrics[0].group.url | interpolateTemplateVars:this }}" target="_blank">{{ ctrl.formatAlias(metrics[0].group.alias, metrics.length, 'warning') }}</a>
-						<a ng-if="metrics.length > 0 && !metrics[0].group.url && metrics[0].group.alias" ng-href="{{ ctrl.warn[0].url | interpolateTemplateVars:this }}" target="_blank">{{ ctrl.formatAlias(metrics[0].group.alias, metrics.length, 'warning') }}</a>
-						<a ng-if="metrics.length > 0 && metrics[0].group.url && !metrics[0].group.alias" ng-href="{{ metrics[0].group.url | interpolateTemplateVars:this }}" target="_blank">{{ metrics.length }}: {{ metrics[0].group.name }}</a>
-						<a ng-if="metrics.length > 0 && !metrics[0].group.url && !metrics[0].group.alias" ng-href="{{ ctrl.warn[0].url | interpolateTemplateVars:this }}" target="_blank">{{ metrics.length }}: {{ metrics[0].group.name }}</a>
-						<span ng-if="metrics[0].warn_tag && metrics[0].warn_tags_type === 'Metric'" ng-show="metrics[0].warn_tag">{{ metrics[0].warn_tag }}</span>
-						<span ng-if="metrics.length && metrics[0].isDisplayValue" >{{ metrics[0].display_value | numberOrTextWithRegex : display.valueDisplayRegex }}</span>
-			   		</div>
 
 					<div ng-style="ctrl.panel.colorMode === 'Metric' && {'color':ctrl.panel.colors.disable}"
 						 ng-class="{'boldAlertMetric': ctrl.panel.fontFormat === 'Bold', 'italicAlertMetric': ctrl.panel.fontFormat === 'Italic'}"
@@ -160,137 +121,39 @@
 						</ng-container>
 					</table>
 
-					<!-- WARNING TABLE -->
-					<table mat-table ng-repeat="(group, metrics) in ctrl.groupWarn">
-						<!-- icon/tag -->
-						<ng-container matColumnDef="icon" ng-repeat="(group, metrics) in ctrl.groupWarn" >
-							<td mat-cell *matCellDef="let element" ng-style="ctrl.panel.colorMode === 'Metric' && {'color':ctrl.panel.colors.warn}"
-								ng-class="{'boldAlertMetric': ctrl.panel.fontFormat === 'Bold', 'italicAlertMetric': ctrl.panel.fontFormat === 'Italic'}"
-								class="icon"
-								ng-if="ctrl.panel.iconSwitch && metrics[0].group.alias">
-								<img ng-if="ctrl.panel.iconSwitch && metrics[0].display_icon && ((metrics[0].warn_tags_type == 'Metric' || !metrics[0].warn_tag) || (metrics[0].warn_tags_type == 'Line' && !metrics[0].warn_tag))" ng-show="metrics[0].display_icon" alt="warn" class="icon" src="{{metrics[0].display_icon}}">
-								<img ng-if="ctrl.panel.iconSwitch && !metrics[0].display_icon && metrics.length && ((metrics[0].warn_tags_type == 'Metric' || !metrics[0].warn_tag) || (metrics[0].warn_tags_type == 'Line' && !metrics[0].warn_tag))" class="icon" src="https://hds.static.autodesk.com/images/table-status-bad.svg">
-								<span ng-if="metrics[0].warn_tag && metrics[0].warn_tags_type === 'Line'" ng-show="metrics[0].warn_tag">
-									{{ metrics[0].warn_tag }}
-								</span>
-							</td>
-						</ng-container>
-						<!-- metrics name -->
-						<ng-container matColumnDef="alias" ng-repeat="(group, metrics) in ctrl.groupWarn">
-							<td mat-cell *matCellDef="let element" ng-style="ctrl.panel.colorMode === 'Metric' && {'color':ctrl.panel.colors.warn}"
-								ng-class="{'boldAlertMetric': ctrl.panel.fontFormat === 'Bold', 'italicAlertMetric': ctrl.panel.fontFormat === 'Italic'}"
-								class="name"
-								ng-if="metrics[0].group.alias">
-								<a ng-if="metrics.length > 0 && metrics[0].group.url && metrics[0].group.alias" ng-href="{{ metrics[0].group.url | interpolateTemplateVars:this }}" target="_blank">{{ ctrl.formatAlias(metrics[0].group.alias, metrics.length, 'warning') }}</a>
-								<a ng-if="metrics.length > 0 && !metrics[0].group.url && metrics[0].group.alias" ng-href="{{ ctrl.warn[0].url | interpolateTemplateVars:this }}" target="_blank">{{ ctrl.formatAlias(metrics[0].group.alias, metrics.length, 'warning') }}</a>
-								<a ng-if="metrics.length > 0 && metrics[0].group.url && !metrics[0].group.alias" ng-href="{{ metrics[0].group.url | interpolateTemplateVars:this }}" target="_blank">{{ metrics.length }}: {{ metrics[0].group.name }}</a>
-								<a ng-if="metrics.length > 0 && !metrics[0].group.url && !metrics[0].group.alias" ng-href="{{ ctrl.warn[0].url | interpolateTemplateVars:this }}" target="_blank">{{ metrics.length }}: {{ metrics[0].group.name }}</a>
-							</td>
-						</ng-container>
-						<!-- metric value -->
-						<ng-container matColumnDef="metric" ng-repeat="(group, metrics) in ctrl.groupWarn">
-							<td mat-cell *matCellDef="let element" ng-style="ctrl.panel.colorMode === 'Metric' && {'color':ctrl.panel.colors.warn}"
-								ng-class="{'boldAlertMetric': ctrl.panel.fontFormat === 'Bold', 'italicAlertMetric': ctrl.panel.fontFormat === 'Italic'}"
-								class="value"
-								ng-if="metrics.length || metrics[0].isDisplayValue">
-								<span ng-if="metrics[0].warn_tag && metrics[0].warn_tags_type === 'Metric'" ng-show="metrics[0].warn_tag" flex>
-									{{ metrics[0].warn_tag }}
-								</span>
-								<span ng-if="metrics.length && metrics[0].isDisplayValue" flex>
-									{{ metrics[0].display_value | numberOrTextWithRegex : display.valueDisplayRegex }}
-								</span>
-							</td>
-						</ng-container>
-					</table>
+					<table>
 
-					<!-- CRITICAL TABLE -->
-					<table mat-table ng-repeat="(group, metrics) in ctrl.groupCrit">
-						<!-- icon/tag -->
-						<ng-container matColumnDef="icon" ng-repeat="(group, metrics) in ctrl.groupCrit">
-							<td mat-cell *matCellDef="let element" ng-style="ctrl.panel.colorMode === 'Metric' && {'color':ctrl.panel.colors.crit}"
-								ng-class="{'boldAlertMetric': ctrl.panel.fontFormat === 'Bold', 'italicAlertMetric': ctrl.panel.fontFormat === 'Italic'}"
-								class="icon"
-								ng-if="ctrl.panel.iconSwitch && metrics[0].group.alias">
-								<img ng-if="ctrl.panel.iconSwitch && metrics[0].display_icon && ((metrics[0].crit_tags_type == 'Metric' || !metrics[0].crit_tag) || (metrics[0].crit_tags_type == 'Line' && !metrics[0].crit_tag))" ng-show="metrics[0].display_icon" alt="crit" class="icon" src="{{metrics[0].display_icon}}">
-								<img ng-if="ctrl.panel.iconSwitch && !metrics[0].display_icon && metrics.length && ((metrics[0].crit_tags_type == 'Metric' || !metrics[0].crit_tag) || (metrics[0].crit_tags_type == 'Line' && !metrics[0].crit_tag))" class="icon" src="https://icons.iconarchive.com/icons/custom-icon-design/flatastic-9/24/Warning-icon.png">
-								<span ng-if="metrics[0].crit_tag && metrics[0].crit_tags_type === 'Line'" ng-show="metrics[0].crit_tag">
-									{{ metrics[0].crit_tag }}
-								</span>
-							</td>
-						</ng-container>
+						<tr ng-repeat="(group, metric) in ctrl.maxGroupTriggeredThresholds">
 
-						<!-- name of field -->
-						<ng-container matColumnDef="alias" ng-repeat="(group, metrics) in ctrl.groupCrit">
-							<td mat-cell *matCellDef="let element" ng-style="ctrl.panel.colorMode === 'Metric' && {'color':ctrl.panel.colors.crit}"
+							<td ng-style="ctrl.panel.colorMode === 'Metric' && {'color': ctrl.getColorByThresholdName(metric.triggeredThreshold.name)}"
 								ng-class="{'boldAlertMetric': ctrl.panel.fontFormat === 'Bold', 'italicAlertMetric': ctrl.panel.fontFormat === 'Italic'}"
-								class="name"
-								ng-if="metrics[0].group.alias">
-								<a ng-if="metrics.length > 0 && metrics[0].group.url && metrics[0].group.alias" ng-href="{{ metrics[0].group.url | interpolateTemplateVars:this }}" target="_blank">{{ ctrl.formatAlias(metrics[0].group.alias, metrics.length, 'critical') }}</a>
-								<a ng-if="metrics.length > 0 && !metrics[0].group.url && metrics[0].group.alias" ng-href="{{ ctrl.crit[0].url | interpolateTemplateVars:this }}" target="_blank">{{ ctrl.formatAlias(metrics[0].group.alias, metrics.length, 'critical') }}</a>
-								<a ng-if="metrics.length > 0 && metrics[0].group.url && !metrics[0].group.alias" ng-href="{{ metrics[0].group.url | interpolateTemplateVars:this }}" target="_blank">{{ metrics.length }}: {{ metrics[0].group.name }}</a>
-								<a ng-if="metrics.length > 0 && !metrics[0].group.url && !metrics[0].group.alias" ng-href="{{ ctrl.crit[0].url | interpolateTemplateVars:this }}" target="_blank">{{ metrics.length }}: {{ metrics[0].group.name }}</a>
+								class="icon">
+									<img ng-if="ctrl.panel.iconSwitch && metric.display_icon && ((metric.tags_type == 'Metric' || !metric.tag) || (metric.tags_type == 'Line' && !metric.tag))" ng-show="metric.display_icon" alt="crit" class="icon" src="{{metric.display_icon}}">
+									<img ng-if="ctrl.panel.iconSwitch && !metric.display_icon && ((metric.tags_type == 'Metric' || !metric.tag) || (metric.tags_type == 'Line' && !metric.tag))" class="icon" src="https://icons.iconarchive.com/icons/custom-icon-design/flatastic-9/24/Warning-icon.png">
+									<span ng-if="metric.tag && metric.tags_type === 'Line'" ng-show="metric.tag">
+										{{ metric.tag }}
+									</span>
 							</td>
-						</ng-container>
+							<td ng-style="ctrl.panel.colorMode === 'Metric' && {'color':ctrl.getColorByThresholdName(metric.triggeredThreshold.name)}"
+								ng-class="{'boldAlertMetric': ctrl.panel.fontFormat === 'Bold', 'italicAlertMetric': ctrl.panel.fontFormat === 'Italic'}"
+								class="name">
+								<a ng-if="metric.group.url && metric.group.alias" ng-href="{{ metric.group.url | interpolateTemplateVars:this }}" target="_blank">{{ ctrl.formatAlias(metric.group.alias, ctrl.groupTriggeredThresholds[group].length, metric.triggeredThreshold.name) }}</a>
+								<a ng-if="metric.group.url && !metric.group.alias" ng-href="{{ metric.group.url | interpolateTemplateVars:this }}" target="_blank">{{ ctrl.groupTriggeredThresholds[group].length }}: {{ metric.group.alias }}</a>
+								<a ng-if="!metric.group.url && metric.group.alias" target="_blank">{{ ctrl.formatAlias(metric.group.alias, ctrl.groupTriggeredThresholds[group].length, metric.triggeredThreshold.name) }}</a>
+								<a ng-if="!metric.group.url && !metric.group.alias" target="_blank">{{ ctrl.groupTriggeredThresholds[group].length }}: {{ metric.group.name }}</a>
+							</td>
+							<td ng-style="ctrl.panel.colorMode === 'Metric' && {'color':ctrl.getColorByThresholdName(metric.triggeredThreshold.name)}"
+								ng-class="{'boldAlertMetric': ctrl.panel.fontFormat === 'Bold', 'italicAlertMetric': ctrl.panel.fontFormat === 'Italic'}"
+								class="value">
+								<span ng-if="metric.tag && metric.tags_type === 'Metric'" ng-show="metric.tag">
+									{{ metric.tag }}
+								</span>
+								<span ng-if="metric.isDisplayValue">
+									{{ metric.display_value | numberOrTextWithRegex : display.valueDisplayRegex }}
+								</span>
+							</td>
+						</tr>
 
-						<!-- metric value -->
-						<ng-container matColumnDef="metric" ng-repeat="(group, metrics) in ctrl.groupCrit">
-							<td mat-cell *matCellDef="let element" ng-style="ctrl.panel.colorMode === 'Metric' && {'color':ctrl.panel.colors.crit}"
-								ng-class="{'boldAlertMetric': ctrl.panel.fontFormat === 'Bold', 'italicAlertMetric': ctrl.panel.fontFormat === 'Italic'}"
-								class="value"
-								ng-if="metrics.length || metrics[0].isDisplayValue">
-								<span ng-if="metrics[0].crit_tag && metrics[0].crit_tags_type === 'Metric'" ng-show="metrics[0].crit_tag">
-									{{ metrics[0].crit_tag }}
-								</span>
-								<span ng-if="metrics.length && metrics[0].isDisplayValue">
-									{{ metrics[0].display_value | numberOrTextWithRegex : display.valueDisplayRegex }}
-								</span>
-							</td>
-						</ng-container>
-					</table>
-
-					<!-- ERROR TABLE -->
-					<table mat-table ng-repeat="(group, metrics) in ctrl.groupError">
-						<!-- icon/tag -->
-						<ng-container matColumnDef="icon" ng-repeat="(group, metrics) in ctrl.groupError">
-							<td mat-cell *matCellDef="let element" ng-style="ctrl.panel.colorMode === 'Metric' && {'color':ctrl.panel.colors.error}"
-								ng-class="{'boldAlertMetric': ctrl.panel.fontFormat === 'Bold', 'italicAlertMetric': ctrl.panel.fontFormat === 'Italic'}"
-								class="icon"
-								ng-if="ctrl.panel.iconSwitch && metrics[0].group.alias">
-								<img ng-if="ctrl.panel.iconSwitch && metrics[0].display_icon && ((metrics[0].error_tags_type == 'Metric' || !metrics[0].error_tag) || (metrics[0].error_tags_type == 'Line' && !metrics[0].error_tag))" ng-show="metrics[0].display_icon" alt="error" class="icon" src="{{metrics[0].display_icon}}">
-								<img ng-if="ctrl.panel.iconSwitch && !metrics[0].display_icon && metrics.length && ((metrics[0].error_tags_type == 'Metric' || !metrics[0].error_tag) || (metrics[0].error_tags_type == 'Line' && !metrics[0].error_tag))" class="icon" src="https://icons.iconarchive.com/icons/paomedia/small-n-flat/24/sign-error-icon.png">
-								<span ng-if="metrics[0].error_tag && metrics[0].error_tags_type === 'Line'" ng-show="metrics[0].error_tag">
-									{{ metrics[0].error_tag }}
-								</span>
-							</td>
-						</ng-container>
-
-						<!-- name of field -->
-						<ng-container matColumnDef="alias" ng-repeat="(group, metrics) in ctrl.groupError">
-							<td mat-cell *matCellDef="let element" ng-style="ctrl.panel.colorMode === 'Metric' && {'color':ctrl.panel.colors.error}"
-								ng-class="{'boldAlertMetric': ctrl.panel.fontFormat === 'Bold', 'italicAlertMetric': ctrl.panel.fontFormat === 'Italic'}"
-								class="name"
-								ng-if="metrics[0].group.alias">
-								<a ng-if="metrics.length > 0 && metrics[0].group.url && metrics[0].group.alias" ng-href="{{ metrics[0].group.url | interpolateTemplateVars:this }}" target="_blank">{{ ctrl.formatAlias(metrics[0].group.alias, metrics.length, 'critical') }}</a>
-								<a ng-if="metrics.length > 0 && !metrics[0].group.url && metrics[0].group.alias" ng-href="{{ ctrl.error[0].url | interpolateTemplateVars:this }}" target="_blank">{{ ctrl.formatAlias(metrics[0].group.alias, metrics.length, 'critical') }}</a>
-								<a ng-if="metrics.length > 0 && metrics[0].group.url && !metrics[0].group.alias" ng-href="{{ metrics[0].group.url | interpolateTemplateVars:this }}" target="_blank">{{ metrics.length }}: {{ metrics[0].group.name }}</a>
-								<a ng-if="metrics.length > 0 && !metrics[0].group.url && !metrics[0].group.alias" ng-href="{{ ctrl.error[0].url | interpolateTemplateVars:this }}" target="_blank">{{ metrics.length }}: {{ metrics[0].group.name }}</a>
-							</td>
-						</ng-container>
-
-						<!-- metric value -->
-						<ng-container matColumnDef="metric" ng-repeat="(group, metrics) in ctrl.groupError">
-							<td mat-cell *matCellDef="let element" ng-style="ctrl.panel.colorMode === 'Metric' && {'color':ctrl.panel.colors.error}"
-								ng-class="{'boldAlertMetric': ctrl.panel.fontFormat === 'Bold', 'italicAlertMetric': ctrl.panel.fontFormat === 'Italic'}"
-								class="value"
-								ng-if="metrics.length || metrics[0].isDisplayValue">
-								<span ng-if="metrics[0].error_tag && metrics[0].error_tags_type === 'Metric'" ng-show="metrics[0].error_tag">
-									{{ metrics[0].error_tag }}
-								</span>
-								<span ng-if="metrics.length && metrics[0].isDisplayValue">
-									{{ metrics[0].display_value | numberOrTextWithRegex : display.valueDisplayRegex }}
-								</span>
-							</td>
-						</ng-container>
 					</table>
 
 				</div>

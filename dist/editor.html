@@ -262,7 +262,7 @@
 
 			<!--Metric URL-->
 			<div class="gf-form">
-				<span class="gf-form-label width-12">
+				<span class="gf-form-label max-width-12">
 				  Metric URL
 				  <info-popover mode="right-normal">
 					Make the name of the metric clickable, and send the user to a link (with explanations what to do when this error occurs)
@@ -394,91 +394,61 @@
 					</info-popover>
 				</h5>
 
-				<!--Warning threshold-->
-				<div class="gf-form">
-					<span class="gf-form-label width-6">
-					  Warning
+				<!-- Threshold -->
+				<div class="gf-form" ng-repeat="threshold in measurement.thresholds">
+
+					<span class="gf-form-label width-6" >
+						{{threshold.name}}
 					</span>
+
 					<input type="number" ng-if="measurement.valueHandler == 'Number Threshold'"
-						   name="warn" ng-model="measurement.warn" class="gf-form-input max-width-7" ng-change="ctrl.onRender()" required />
+						   ng-model="threshold.value" class="gf-form-input max-width-7" ng-change="ctrl.validateThresholdValues(measurement)" required />
 					<input type="text" ng-if="measurement.valueHandler == 'String Threshold'"
-						   name="warn" ng-model="measurement.warn" class="gf-form-input max-width-7" ng-change="ctrl.onRender()" required />
+						   ng-model="threshold.value" class="gf-form-input max-width-7" ng-change="ctrl.onRender()" required />
 					<input type="datetime-local" ng-if="measurement.valueHandler == 'Date Threshold'"
-						   name="warn" ng-model="measurement.warn" class="gf-form-input max-width-7" ng-change="ctrl.onRender()" required />
+						   ng-model="threshold.value" class="gf-form-input max-width-7" ng-change="ctrl.validateThresholdValues(measurement)" required />
 					<span class="gf-form-label width-3">
 					  icon
 					</span>
-					<input type="url" name="icon-warn" ng-model="measurement.warn_icon" class="gf-form-input max-width-12" ng-change="ctrl.onRender()" required />
+					<input type="url" name="icon-warn" ng-model="threshold.icon" class="gf-form-input max-width-12" ng-change="ctrl.onRender()" required />
 				    <span class="gf-form-label width-3">
 					  tag
 					</span>
-					<input class="gf-form-input max-width-8" type='text' ng-model="measurement.warn_tag" ng-change="ctrl.onRender()">
+					<input class="gf-form-input max-width-8" type='text' ng-model="threshold.tags" ng-change="ctrl.onRender()">
 					<div class="gf-form-select-wrapper max-width-7">
 						<select class="gf-form-input"
-								ng-init="measurement.warn_tags_type = (measurement.warn_tags_type ? measurement.warn_tags_type : ctrl.displayTagsType[0])"
-								ng-model="measurement.warn_tags_type"
+								ng-init="threshold.tags_type = (threshold.tags_type ? threshold.tags_type : ctrl.displayTagsType[0])"
+								ng-model="threshold.tags_type"
 								ng-options="t for t in ctrl.displayTagsType"
 								ng-change="ctrl.onRender()"
 						></select>
 					</div>		   
 				</div>
 
-				<!--Critical threshold-->
 				<div class="gf-form">
-					<span class="gf-form-label width-6">
-					  Critical
+					<span class="gf-form-label width-12">
+						Validation Order 
+						<info-popover mode="normal">
+							If Ascending, than Warning status should have lower value then Critical. If current value of measurement will be 
+							lower then Warning - it's OK state. If you have an Descending order, then Critical should have lower value then Warning.
+							If current value of measurement will be greater then Warning - it's OK state.
+						</info-popover>
 					</span>
-					<input type="number" ng-if="measurement.valueHandler == 'Number Threshold'"
-						   name="crit" ng-model="measurement.crit" class="gf-form-input max-width-7" ng-change="ctrl.onRender()" required />
-					<input type="text" ng-if="measurement.valueHandler == 'String Threshold'"
-						   name="crit" ng-model="measurement.crit" class="gf-form-input max-width-7" ng-change="ctrl.onRender()" required />
-					<input type="datetime-local" ng-if="measurement.valueHandler == 'Date Threshold'"
-						   name="crit" ng-model="measurement.crit" class="gf-form-input max-width-7" ng-change="ctrl.onRender()" required />
-				   	<span class="gf-form-label width-3">
-					  icon
-					</span>
-					<input type="text" name="icon-crit" ng-model="measurement.crit_icon" class="gf-form-input max-width-12" ng-change="ctrl.onRender()"/>
-					<span class="gf-form-label width-3">
-					  tag
-					</span>
-					<input class="gf-form-input max-width-8" type='text' ng-model="measurement.crit_tag" ng-change="ctrl.onRender()">
-					<div class="gf-form-select-wrapper max-width-7">
-						<select class="gf-form-input"
-								ng-init="measurement.crit_tags_type = (measurement.crit_tags_type ? measurement.crit_tags_type : ctrl.displayTagsType[0])"
-								ng-model="measurement.crit_tags_type"
-								ng-options="t for t in ctrl.displayTagsType"
-								ng-change="ctrl.onRender()"
-						></select>
-					</div>	  
+					<select class="gf-form-input"
+							ng-model="measurement.thresholdsOrder"
+							ng-change="ctrl.validateThresholdValues(measurement)"
+							required>
+						<option value={{ctrl.ASCENDING_ORDER}}>
+							Ascending
+						</option>
+						<option value={{ctrl.DESCENDING_ORDER}}>
+							Descending
+						</option>
+					</select>
 				</div>
 
-				<!--Error threshold-->
-				<div class="gf-form">
-					<span class="gf-form-label width-6">
-					  Error
-					</span>
-					<input type="number" ng-if="measurement.valueHandler == 'Number Threshold'"
-						   name="error" ng-model="measurement.error" class="gf-form-input max-width-7" ng-change="ctrl.onRender()" required />
-					<input type="text" ng-if="measurement.valueHandler == 'String Threshold'"
-						   name="error" ng-model="measurement.error" class="gf-form-input max-width-7" ng-change="ctrl.onRender()" required />
-					<input type="datetime-local" ng-if="measurement.valueHandler == 'Date Threshold'"
-						   name="error" ng-model="measurement.error" class="gf-form-input max-width-7" ng-change="ctrl.onRender()" required />
-				   	<span class="gf-form-label width-3">
-					  icon
-					</span>
-					<input type="text" name="icon-error" ng-model="measurement.error_icon" class="gf-form-input max-width-12" ng-change="ctrl.onRender()" required />
-					<span class="gf-form-label width-3">
-					  tag
-					</span>
-					<input class="gf-form-input max-width-8" type='text' ng-model="measurement.error_tag" ng-change="ctrl.onRender()">
-					<div class="gf-form-select-wrapper max-width-7">
-						<select class="gf-form-input"
-								ng-init="measurement.error_tags_type = (measurement.error_tags_type ? measurement.error_tags_type : ctrl.displayTagsType[0])"
-								ng-model="measurement.error_tags_type"
-								ng-options="t for t in ctrl.displayTagsType"
-								ng-change="ctrl.onRender()"
-						></select>
-					</div>	   
+				<div ng-if="!measurement.isThresholdValuesValid" class='error-message'>
+					<b>Error</b>: Values should come in {{threshold.thresholdsOrder === ctrl.ASCENDING_ORDER? "Ascending" : "Descending"}} order. The thresholds will be ignored until fix.
 				</div>
 
 				<!--Display Value Type-->
@@ -511,10 +481,11 @@
 					</span>
 					<div class="gf-form-select-wrapper max-width-12">
 						<select class="gf-form-input"
+								ng-init="measurement.displayValueWithAlias = measurement.displayValueWithAlias || ctrl.displayValueTypes[0].name"
 								ng-model="measurement.displayValueWithAlias"
 								ng-change="ctrl.onRender()"
 								required>
-							<option ng-repeat="option in ctrl.displayValueTypes" value="option.index" >
+							<option ng-repeat="option in ctrl.displayValueTypes" value="{{ option.name }}" >
 								{{option.label}}
 							</option>
 						</select>

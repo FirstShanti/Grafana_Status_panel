@@ -184,7 +184,7 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 		_this.aggregations = ['Last', 'First', 'Max', 'Min', 'Sum', 'Avg', 'Delta'];
 		_this.displayTypes = ['Regular', 'Annotation'];
 		_this.displayAliasTypes = ['If not OK', 'Always'];
-		_this.displayValueTypes = [{ label: 'Never', index: -2 }, { label: 'When Alias Displayed', index: -1 }].concat(_toConsumableArray(_this.getDisplayValueOptions()));
+		_this.displayValueTypes = _this.getDisplayValueOptions();
 		_this.displayTags = ['+/-', 'UP/DOWN', 'TRENDING/FALLING'];
 		_this.displayTagsType = ['Line', 'Metric'];
 		_this.colorModes = ['Panel', 'Metric', 'Disabled'];
@@ -192,6 +192,12 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 		_this.statusMetrics = [];
 		_this.panelShapes = ['Rectangle', 'Ellipse', 'Circle'];
 		_this.panelFormat = ['Default', 'Tabular'];
+
+		_this.ASCENDING_ORDER = "ASC";
+		_this.DESCENDING_ORDER = "DESC";
+
+		_this.DEFAULT_ERROR_STATUS_ICON = 'https://hds.static.autodesk.com/admin/img/icon_error.gif';
+		_this.DEFAULT_OR_STATUS_ICON = 'https://hds.static.autodesk.com/images/table-status-good.svg';
 
 		_this.newThresholdName = null;
 
@@ -223,27 +229,53 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 
 		_this.onColorChange = _this.onColorChange.bind(_this);
 
-		_this.statusError = [];
-		_this.statusCrit = [];
-		_this.statusWarn = [];
+		_this.triggeredStatuses = [];
+		_this.maxGroupTriggeredThresholds = {};
 		_this.statusMetric = null;
 
-		// FIND ME!
-		_this.status = [];
-
 		_this.addFilters();
+		_this.updateMeasurementsThresholds();
+
+		var _iteratorNormalCompletion = true;
+		var _didIteratorError = false;
+		var _iteratorError = undefined;
+
+		try {
+			for (var _iterator = _this.panel.targets[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+				var measurement = _step.value;
+
+				_this.validateThresholdValues(measurement);
+				if (measurement.thresholdsOrder == null) {
+					measurement.thresholdsOrder = _this.ASCENDING_ORDER;
+				}
+			}
+		} catch (err) {
+			_didIteratorError = true;
+			_iteratorError = err;
+		} finally {
+			try {
+				if (!_iteratorNormalCompletion && _iterator.return) {
+					_iterator.return();
+				}
+			} finally {
+				if (_didIteratorError) {
+					throw _iteratorError;
+				}
+			}
+		}
+
 		return _this;
 	}
 
 	_createClass(StatusPluginCtrl, [{
 		key: "getDisplayValueOptions",
 		value: function getDisplayValueOptions() {
-			return this.panel.thresholds.map(function (el, i) {
+			return [{ label: 'Never', name: "__never__" }, { label: 'When Alias Displayed', name: "__When_Alias_Displayed__" }].concat(_toConsumableArray(this.panel.thresholds.map(function (el, i) {
 				return {
 					label: el.name + " and higher",
-					index: i
+					name: el.name
 				};
-			});
+			})));
 		}
 	}, {
 		key: "addFilters",
@@ -308,6 +340,7 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 
 			this.measurements = this.panel.targets;
 			console.log("measurements", [].concat(_toConsumableArray(this.measurements)));
+			this.updateMeasurementsThresholds();
 
 			/** Duplicate alias validation **/
 			this.duplicates = false;
@@ -347,6 +380,7 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 			if (this.panel.title.length === 0) {
 				panelHeaderHeight = '10px';
 			}
+			console.log("his.$panelContainer", this.$panelContainer);
 			this.$panelContainer.find('.panel-header').css('height', panelHeaderHeight);
 			this.$panelContainer.find('.panel-menu-container').css('height', panelHeaderHeight);
 			this.$panelContainer.find('.fa-caret-down').css('display', 'none');
@@ -413,7 +447,6 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 		value: function onColorChange(item) {
 			var _this4 = this;
 
-			// useless?
 			return function (color) {
 				_this4.panel.colors[item] = color;
 				_this4.render();
@@ -427,6 +460,14 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 				return;
 			}
 
+			// Validate name are unique.
+			for (var threshold in this.panel.thresholds) {
+				if (threshold.name == this.newThresholdName) {
+					alert("This name already exists.");
+					return;
+				}
+			}
+
 			this.panel.thresholds.push({
 				name: this.newThresholdName,
 				order: this.panel.thresholds.length,
@@ -434,6 +475,86 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 			});
 
 			this.newThresholdName = null;
+			this.updateMeasurementsThresholds();
+			this.displayValueTypes = this.getDisplayValueOptions();
+		}
+	}, {
+		key: "updateMeasurementsThresholds",
+		value: function updateMeasurementsThresholds() {
+
+			console.log("updateMeasurementsThresholds");
+
+			var _iteratorNormalCompletion2 = true;
+			var _didIteratorError2 = false;
+			var _iteratorError2 = undefined;
+
+			try {
+				for (var _iterator2 = this.panel.targets[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+					var measurement = _step2.value;
+
+					if (!measurement.thresholds) {
+						measurement.thresholds = [];
+					}
+
+					var measurementsThresholdsMapping = measurement.thresholds.reduce(function (a, x) {
+						a[x.name] = x;
+						return a;
+					}, {});
+
+					var newMeasurementThresholds = [];
+
+					var _iteratorNormalCompletion3 = true;
+					var _didIteratorError3 = false;
+					var _iteratorError3 = undefined;
+
+					try {
+						for (var _iterator3 = this.panel.thresholds[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+							var threshold = _step3.value;
+
+
+							var previousThresholdValues = measurementsThresholdsMapping[threshold.name] || {};
+
+							newMeasurementThresholds.push({
+								name: threshold.name,
+								order: threshold.order,
+								value: previousThresholdValues.value || null,
+								tags: previousThresholdValues.tags || null,
+								tags_type: previousThresholdValues.tags_type || null,
+								icon: previousThresholdValues.icon || null
+							});
+						}
+					} catch (err) {
+						_didIteratorError3 = true;
+						_iteratorError3 = err;
+					} finally {
+						try {
+							if (!_iteratorNormalCompletion3 && _iterator3.return) {
+								_iterator3.return();
+							}
+						} finally {
+							if (_didIteratorError3) {
+								throw _iteratorError3;
+							}
+						}
+					}
+
+					measurement.thresholds = newMeasurementThresholds;
+					this.validateThresholdValues(measurement);
+				}
+			} catch (err) {
+				_didIteratorError2 = true;
+				_iteratorError2 = err;
+			} finally {
+				try {
+					if (!_iteratorNormalCompletion2 && _iterator2.return) {
+						_iterator2.return();
+					}
+				} finally {
+					if (_didIteratorError2) {
+						throw _iteratorError2;
+					}
+				}
+			}
 		}
 	}, {
 		key: "onRemoveThreshold",
@@ -444,6 +565,36 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 			this.panel.thresholds.forEach(function (el, index) {
 				return el.order = index;
 			});
+			this.updateMeasurementsThresholds();
+			var _iteratorNormalCompletion4 = true;
+			var _didIteratorError4 = false;
+			var _iteratorError4 = undefined;
+
+			try {
+				for (var _iterator4 = this.panel.targets[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+					var measurement = _step4.value;
+
+					if (measurement.displayValueWithAlias == thresholdToDelete.name) {
+						var index = Math.min(thresholdToDelete.order, this.panel.thresholds.length - 1);
+						measurement.displayValueWithAlias = (this.panel.thresholds[index] || this.displayValueTypes[1]).name;
+					}
+				}
+			} catch (err) {
+				_didIteratorError4 = true;
+				_iteratorError4 = err;
+			} finally {
+				try {
+					if (!_iteratorNormalCompletion4 && _iterator4.return) {
+						_iterator4.return();
+					}
+				} finally {
+					if (_didIteratorError4) {
+						throw _iteratorError4;
+					}
+				}
+			}
+
+			this.displayValueTypes = this.getDisplayValueOptions();
 		}
 	}, {
 		key: "shiftThresholdOrder",
@@ -459,6 +610,8 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 			this.panel.thresholds = this.panel.thresholds.sort(function (a, b) {
 				return a.order - b.order;
 			});
+			this.updateMeasurementsThresholds();
+			this.displayValueTypes = this.getDisplayValueOptions();
 		}
 	}, {
 		key: "onSetThresholdColor",
@@ -497,26 +650,24 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 			this.error = [];
 			this.crit = [];
 			this.warn = [];
-			this.status = [];
-			this.statusError = [];
-			this.statusCrit = [];
-			this.statusWarn = [];
+			this.triggeredStatuses = [];
+			this.groupedTriggeredStatuses = {};
 			this.disabled = [];
 			this.display = [];
 			this.annotation = [];
 			this.extraMoreAlerts = null;
 
 			this.statusMetrics = [];
-			this.groupError = {};
-			this.groupCrit = {};
-			this.groupWarn = {};
+
+			this.maxGroupTriggeredThresholds = {};
+			this.groupTriggeredThresholds = {};
 
 			if (this.panel.statusGroups) {
 				var statusGroupExists = false;
 				this.panel.statusGroups.forEach(function (element) {
-					_this6.groupError[element.name] = [];
-					_this6.groupCrit[element.name] = [];
-					_this6.groupWarn[element.name] = [];
+
+					_this6.groupTriggeredThresholds[element.name] = [];
+
 					if (element.name === 'Status Checks') {
 						statusGroupExists = true;
 					}
@@ -525,6 +676,8 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 					this.panel.statusGroups.unshift({ name: 'Status Checks', alias: '', url: '' });
 				}
 			}
+
+			console.log("Series", this.series);
 
 			_lodash2.default.each(this.series, function (s) {
 				var target = _lodash2.default.find(targets, function (target) {
@@ -598,6 +751,10 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 					_this6.handleTextOnly(s, target);
 				}
 
+				console.log("diplay", _this6.display);
+				console.log("annotation", _this6.annotation);
+				console.log("groupTriggeredThresholds", _this6.groupTriggeredThresholds);
+
 				// this.statusMetrics.push(s.alias)
 			});
 
@@ -605,9 +762,8 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 				this.error = [];
 				this.crit = [];
 				this.warn = [];
-				this.groupError = {};
-				this.groupCrit = {};
-				this.groupWarn = {};
+				this.groupTriggeredThresholds = {};
+				this.maxGroupTriggeredThresholds = {};
 				this.display = [];
 			}
 
@@ -673,140 +829,314 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 			});
 		}
 	}, {
+		key: "validateThresholdValues",
+		value: function validateThresholdValues(measurement) {
+			// !All thresholds should be sorted in ascending order by threshold.order field.
+			console.log("validateThresholdValues");
+
+			measurement.isThresholdValuesValid = true;
+
+			if (measurement.thresholds.length < 3) {
+				return; // There is no sense to validate if values situated in the right order if there is 0, 1 or 2 elements. Order can be Asc and Desc
+			}
+
+			var activeThresholds = measurement.thresholds.filter(function (el) {
+				return el.value != null;
+			}); // check that value is passed
+
+			if (activeThresholds.length < 2) {
+				return;
+			}
+
+			for (var i = 0; i < activeThresholds.length - 1; i++) {
+
+				if (measurement.thresholdsOrder === this.ASCENDING_ORDER && activeThresholds[i].value >= activeThresholds[i + 1].value) {
+					measurement.isThresholdValuesValid = false;
+					return;
+				}
+
+				if (measurement.thresholdsOrder === this.DESCENDING_ORDER && activeThresholds[i].value <= activeThresholds[i + 1].value) {
+					measurement.isThresholdValuesValid = false;
+					return;
+				}
+			}
+
+			if (this.$panelContainer) {
+				this.onRender(); // render if inited
+			}
+		}
+	}, {
+		key: "getColor",
+		value: function getColor(threshold) {
+			if (!threshold) {
+				return '#000';
+			}
+
+			return this.getColorByThresholdName(threshold.name);
+		}
+	}, {
 		key: "handleThresholdStatus",
 		value: function handleThresholdStatus(series, target) {
-			series.thresholds = StatusPluginCtrl.parseThresholds(target);
-			series.inverted = series.thresholds.error < series.thresholds.crit && series.thresholds.crit < series.thresholds.warn;
+			series.thresholds = this.parseThresholds(target);
+			series.thresholdsOrder = target.thresholdsOrder;
 
-			var isError = false;
-			var isCritical = false;
-			var isWarning = false;
+			if (!target.isThresholdValuesValid) {
+				console.error("Thresholds are invalid. Ignoring them.");
+				return;
+			}
+
+			var triggeredThreshold = null;
 
 			var isStatus = false;
-			var isCheckRanges = series.thresholds.errorIsNumber && series.thresholds.warnIsNumber && series.thresholds.critIsNumber;
+			var isCheckRanges = series.thresholds.map(function (el) {
+				return el.isNumber;
+			}).every(function (el) {
+				return el === true;
+			});
 
 			if (series.hasOwnProperty('group') && series.group === this.panel.statusGroups[0]) {
 				isStatus = true;
-				// this.statusMetrics.push(series);
 			}
 
 			if (isCheckRanges) {
-				if (!series.inverted) {
-					if (series.display_value >= series.thresholds.error) {
-						isError = true;
-					} else if (series.display_value >= series.thresholds.crit && series.alias) {
-						isCritical = true;
-					} else if (series.display_value >= series.thresholds.warn) {
-						isWarning = true;
+				console.log("isCheckRanges");
+				if (series.thresholdsOrder === this.ASCENDING_ORDER) {
+					var _iteratorNormalCompletion5 = true;
+					var _didIteratorError5 = false;
+					var _iteratorError5 = undefined;
+
+					try {
+
+						for (var _iterator5 = series.thresholds[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
+							var threshold = _step5.value;
+
+							console.log("series.display_value >= threshold.parsedValue", series.display_value, threshold.parsedValue);
+							if (series.display_value >= threshold.parsedValue) {
+								triggeredThreshold = threshold;
+								// break;
+							}
+						}
+					} catch (err) {
+						_didIteratorError5 = true;
+						_iteratorError5 = err;
+					} finally {
+						try {
+							if (!_iteratorNormalCompletion5 && _iterator5.return) {
+								_iterator5.return();
+							}
+						} finally {
+							if (_didIteratorError5) {
+								throw _iteratorError5;
+							}
+						}
 					}
-				} else {
-					if (series.display_value <= series.thresholds.error) {
-						isError = true;
-					} else if (series.display_value <= series.thresholds.crit && series.alias) {
-						isCritical = true;
-					} else if (series.display_value <= series.thresholds.warn) {
-						isWarning = true;
+				} else if (series.thresholdsOrder === this.DESCENDING_ORDER) {
+					var _iteratorNormalCompletion6 = true;
+					var _didIteratorError6 = false;
+					var _iteratorError6 = undefined;
+
+					try {
+
+						for (var _iterator6 = series.thresholds[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
+							var _threshold = _step6.value;
+
+							if (series.display_value <= _threshold.parsedValue) {
+								console.log("series.display_value <= threshold.parsedValue", series.display_value, _threshold.parsedValue);
+								triggeredThreshold = _threshold;
+								// break;
+							}
+						}
+					} catch (err) {
+						_didIteratorError6 = true;
+						_iteratorError6 = err;
+					} finally {
+						try {
+							if (!_iteratorNormalCompletion6 && _iterator6.return) {
+								_iterator6.return();
+							}
+						} finally {
+							if (_didIteratorError6) {
+								throw _iteratorError6;
+							}
+						}
 					}
 				}
 			} else {
-				if (series.display_value == series.thresholds.error) {
-					isError = true;
-				} else if (series.display_value == series.thresholds.crit && series.alias) {
-					isCritical = true;
-				} else if (series.display_value == series.thresholds.warn) {
-					isWarning = true;
+				console.log("is NOT CheckRanges");
+				var _iteratorNormalCompletion7 = true;
+				var _didIteratorError7 = false;
+				var _iteratorError7 = undefined;
+
+				try {
+					for (var _iterator7 = series.thresholds[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
+						var _threshold2 = _step7.value;
+
+						if (series.display_value == _threshold2.parsedValue) {
+							triggeredThreshold = _threshold2;
+							break;
+						}
+					}
+				} catch (err) {
+					_didIteratorError7 = true;
+					_iteratorError7 = err;
+				} finally {
+					try {
+						if (!_iteratorNormalCompletion7 && _iterator7.return) {
+							_iterator7.return();
+						}
+					} finally {
+						if (_didIteratorError7) {
+							throw _iteratorError7;
+						}
+					}
 				}
 			}
 
 			// Add units-of-measure and decimal formatting or date formatting as needed
 			series.display_value = this.formatDisplayValue(series.display_value, target);
-			series.display_icon = this.getThresholdIcon(target);
+			series.display_icon = this.getThresholdIcon(triggeredThreshold);
+			series.color = this.getColor(triggeredThreshold);
 
-			var _getTag = this.getTag(series.display_value, target.error_tags, target.error_tags_type);
+			var _getTag = this.getTag(series.display_value, triggeredThreshold);
 
 			var _getTag2 = _slicedToArray(_getTag, 3);
 
-			series.error_tag = _getTag2[0];
-			series.error_tags = _getTag2[1];
-			series.error_tags_type = _getTag2[2];
+			series.tag = _getTag2[0];
+			series.tags = _getTag2[1];
+			series.tags_type = _getTag2[2];
 
-			var _getTag3 = this.getTag(series.display_value, target.crit_tags, target.crit_tags_type);
+			series.triggeredThreshold = triggeredThreshold;
+			var displayAlias = false;
 
-			var _getTag4 = _slicedToArray(_getTag3, 3);
+			if (target.displayAliasType === "Always") {
+				displayAlias = true;
+			} else if (target.displayAliasType === "If not OK" && triggeredThreshold) {
+				displayAlias = true;
+			}
 
-			series.crit_tag = _getTag4[0];
-			series.crit_tags = _getTag4[1];
-			series.crit_tags_type = _getTag4[2];
+			var displayValue = false;
 
-			var _getTag5 = this.getTag(series.display_value, target.warn_tags, target.warn_tags_type);
-
-			var _getTag6 = _slicedToArray(_getTag5, 3);
-
-			series.warn_tag = _getTag6[0];
-			series.warn_tags = _getTag6[1];
-			series.warn_tags_type = _getTag6[2];
-
-
-			var displayValueWhenAliasDisplayed = 'When Alias Displayed' === target.displayValueWithAlias;
-			var displayValueFromWarning = 'If not OK' === target.displayValueWithAlias;
-			var displayValueFromCritical = 'Critical Only' === target.displayValueWithAlias;
-			var displayValueFromError = 'Error Only' === target.displayValueWithAlias;
-
-			if (isError) {
-				series.displayType = this.displayTypes[0];
-				series.isDisplayValue = displayValueWhenAliasDisplayed || displayValueFromError || displayValueFromWarning;
-				if (isStatus) {
-					this.statusError.push(series);
-				} else {
-					this.error.push(series);
-					if (series.hasOwnProperty('group')) {
-						this.groupError[series.group.name].push(series);
-					}
+			if (target.displayValueWithAlias === '__When_Alias_Displayed__' && displayAlias) {
+				displayValue = true;
+			} else if (target.displayValueWithAlias === '__never__') {
+				displayValue = false;
+			} else if (triggeredThreshold) {
+				var thresholdToDisplayValue = this.panel.thresholds.find(function (el) {
+					return el.name == target.displayValueWithAlias;
+				});
+				if (!thresholdToDisplayValue) {
+					displayValue = false;
+					console.error("thresholdToDisplayValue is empty! Error with thresholds.");
 				}
-			} else if (isCritical) {
-				//In critical state we don't show the error as annotation
-				series.displayType = this.displayTypes[0];
-				series.isDisplayValue = displayValueWhenAliasDisplayed || displayValueFromWarning || displayValueFromCritical;
-				if (isStatus) {
-					this.statusCrit.push(series);
-				} else {
-					this.crit.push(series);
-					if (series.hasOwnProperty('group')) {
-						this.groupCrit[series.group.name].push(series);
-					}
+				if (triggeredThreshold.order >= thresholdToDisplayValue.order) {
+					displayValue = true;
 				}
-			} else if (isWarning) {
-				//In warning state we don't show the warning as annotation
-				series.displayType = this.displayTypes[0];
-				series.isDisplayValue = displayValueWhenAliasDisplayed || displayValueFromWarning;
-				if (isStatus) {
-					this.statusWarn.push(series);
-				} else {
-					this.warn.push(series);
-					if (series.hasOwnProperty('group')) {
-						this.groupWarn[series.group.name].push(series);
-					}
-				}
-			} else if ("Always" == target.displayAliasType) {
-				series.isDisplayValue = displayValueWhenAliasDisplayed;
-				if (series.displayType == "Annotation") {
+			}
+
+			series.isDisplayValue = displayValue;
+
+			console.log("displayAlias", displayAlias);
+			console.log("triggeredThreshold", triggeredThreshold);
+
+			if (displayAlias && !triggeredThreshold) {
+				// If OK state
+				if (series.displayType === "Annotation") {
 					this.annotation.push(series);
 				} else {
 					this.display.push(series);
 				}
+			} else if (triggeredThreshold) {
+				//In not OK state we don't show the error as annotation
+				series.displayType = this.displayTypes[0];
+
+				if (isStatus) {
+					this.triggeredStatuses.push(series);
+				} else {
+					// this.error.push(series);
+					if (series.hasOwnProperty('group')) {
+						this.groupTriggeredThresholds[series.group.name].push(series);
+					}
+				}
 			} else if (isStatus) {
+				// FOR OK status
 				this.statusMetrics.push(series);
 			}
+
+			this.groupedTriggeredStatuses = this.groupTriggeredStatusesByThresholds(this.triggeredStatuses);
+
+			for (var group in this.groupTriggeredThresholds) {
+				if (this.groupTriggeredThresholds[group].length > 0) {
+					this.maxGroupTriggeredThresholds[group] = this.getMetricWithGreatedOrder(this.groupTriggeredThresholds[group]);
+				}
+			}
+
+			console.log("============this.maxGroupTriggeredThresholds", this.maxGroupTriggeredThresholds);
+
+			console.log(series, target);
+
+			// if (isError) {
+			// 	series.displayType = this.displayTypes[0];
+			// 	series.isDisplayValue = displayValueWhenAliasDisplayed || displayValueFromError || displayValueFromWarning;
+			// 	if (isStatus) {
+			// 		this.statusError.push(series);
+			// 	} else {
+			// 		this.error.push(series);
+			// 		if (series.hasOwnProperty('group')) {
+			// 			this.groupError[series.group.name].push(series);
+			// 		}
+			// 	}
+			// } else if(isCritical) {
+			// 	//In critical state we don't show the error as annotation
+			// 	series.displayType = this.displayTypes[0];
+			// 	series.isDisplayValue = displayValueWhenAliasDisplayed || displayValueFromWarning || displayValueFromCritical;
+			// 	if(isStatus) {
+			// 		this.statusCrit.push(series);
+			// 	}
+			// 	else {
+			// 		this.crit.push(series);
+			// 		if(series.hasOwnProperty('group')) {
+			// 			this.groupCrit[series.group.name].push(series);
+			// 		}
+			// 	}
+			// } else if(isWarning) {
+			// 	//In warning state we don't show the warning as annotation
+			// 	series.displayType = this.displayTypes[0];
+			// 	series.isDisplayValue = displayValueWhenAliasDisplayed || displayValueFromWarning;
+			// 	if(isStatus){
+			// 		this.statusWarn.push(series);
+			// 	}
+			// 	else{
+			// 		this.warn.push(series);
+			// 		if(series.hasOwnProperty('group')) {
+			// 			this.groupWarn[series.group.name].push(series);
+			// 		}
+			// 	}
+			// } else if ("Always" == target.displayAliasType) {
+			// 	series.isDisplayValue = displayValueWhenAliasDisplayed;
+			// 	if(series.displayType == "Annotation") {
+			// 		this.annotation.push(series);
+			// 	} 
+			// 	else {
+			// 		this.display.push(series);
+			// 	}
+			// } else if(isStatus){
+			// 	this.statusMetrics.push(series);
+			// }
 		}
 	}, {
 		key: "getTag",
-		value: function getTag(value, displayTags, displayTagsType) {
-			if (displayTags === '+/-') {
-				return [value > 0 ? '+' : '-', displayTags, displayTagsType];
-			} else if (displayTags === 'UP/DOWN') {
-				return [value > 0 ? 'UP' : 'DOWN', displayTags, displayTagsType];
-			} else if (displayTags === 'TRENDING/FALLING') {
-				return [value > 0 ? 'TRENDING' : 'FALLING', displayTags, displayTagsType];
+		value: function getTag(value, triggeredThreshold) {
+
+			if (!triggeredThreshold) {
+				return [null, null, null];
+			}
+
+			if (triggeredThreshold.tags === '+/-') {
+				return [value > 0 ? '+' : '-', triggeredThreshold.tags, triggeredThreshold.tags_type];
+			} else if (triggeredThreshold.tags === 'UP/DOWN') {
+				return [value > 0 ? 'UP' : 'DOWN', triggeredThreshold.tags, triggeredThreshold.tags_type];
+			} else if (triggeredThreshold.tags === 'TRENDING/FALLING') {
+				return [value > 0 ? 'TRENDING' : 'FALLING', triggeredThreshold.tags, triggeredThreshold.tags_type];
 			} else {
 				return [null, null, null];
 			}
@@ -873,16 +1203,86 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 			}
 		}
 	}, {
+		key: "getStatusWithGreatedOrder",
+		value: function getStatusWithGreatedOrder(triggeredThresholds) {
+			var maxOrder = -1;
+			var greatestThreshold = null;
+
+			var _iteratorNormalCompletion8 = true;
+			var _didIteratorError8 = false;
+			var _iteratorError8 = undefined;
+
+			try {
+				for (var _iterator8 = triggeredThresholds[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
+					var series = _step8.value;
+
+					if (series.triggeredThreshold.order > maxOrder) {
+						maxOrder = series.triggeredThreshold.order;
+						greatestThreshold = series.triggeredThreshold;
+					}
+				}
+			} catch (err) {
+				_didIteratorError8 = true;
+				_iteratorError8 = err;
+			} finally {
+				try {
+					if (!_iteratorNormalCompletion8 && _iterator8.return) {
+						_iterator8.return();
+					}
+				} finally {
+					if (_didIteratorError8) {
+						throw _iteratorError8;
+					}
+				}
+			}
+
+			return greatestThreshold;
+		}
+	}, {
+		key: "getMetricWithGreatedOrder",
+		value: function getMetricWithGreatedOrder(triggeredThresholds) {
+			var maxOrder = -1;
+			var greatestMetric = null;
+
+			var _iteratorNormalCompletion9 = true;
+			var _didIteratorError9 = false;
+			var _iteratorError9 = undefined;
+
+			try {
+				for (var _iterator9 = triggeredThresholds[Symbol.iterator](), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
+					var series = _step9.value;
+
+					if (series.triggeredThreshold.order > maxOrder) {
+						maxOrder = series.triggeredThreshold.order;
+						greatestMetric = series;
+					}
+				}
+			} catch (err) {
+				_didIteratorError9 = true;
+				_iteratorError9 = err;
+			} finally {
+				try {
+					if (!_iteratorNormalCompletion9 && _iterator9.return) {
+						_iterator9.return();
+					}
+				} finally {
+					if (_didIteratorError9) {
+						throw _iteratorError9;
+					}
+				}
+			}
+
+			return greatestMetric;
+		}
+	}, {
 		key: "updatePanelState",
 		value: function updatePanelState() {
 			if (this.duplicates) {
 				this.panelState = 'error-state';
 			} else if (this.disabled.length > 0) {
 				this.panelState = 'disabled-state';
-			} else if (this.statusCrit.length > 0 || this.statusError.length > 0) {
-				this.panelState = 'error-state';
-			} else if (this.statusWarn.length > 0) {
-				this.panelState = 'warn-state';
+			} else if (this.triggeredStatuses.length > 0) {
+				this.panelState = this.getStatusWithGreatedOrder(this.triggeredStatuses).name;
 			} else if ((this.series == undefined || this.series.length == 0) && this.panel.isGrayOnNoData) {
 				this.panelState = 'no-data-state';
 			} else {
@@ -899,7 +1299,8 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 	}, {
 		key: "handleCssDisplay",
 		value: function handleCssDisplay() {
-			this.$panelContainer.removeClass('error-state warn-state disabled-state ok-state no-data-state');
+			// console.log("REMOVE", 'error-state disabled-state ok-state no-data-state ' + this.panel.thresholds.map(el => el.name).join(''))
+			// this.$panelContainer.removeClass('error-state disabled-state ok-state no-data-state ' + this.panel.thresholds.map(el => el.name).join(' '));
 			this.$panelContainer.addClass(this.panelState);
 
 			var height = this.$panelContainer.find('.status-panel').height();
@@ -932,21 +1333,51 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 			var okColor = this.panel.isIgnoreOKColors ? '' : this.panel.colors.ok;
 
 			if (this.panel.colorMode === "Panel") {
-				switch (this.panelState) {
-					case 'disabled-state':
-						this.$panelContainer.css('background-color', this.panel.colors.disable);break;
-					case 'error-state':
-						this.$panelContainer.css('background-color', this.panel.colors.crit);break;
-					case 'warn-state':
-						this.$panelContainer.css('background-color', this.panel.colors.warn);break;
-					case 'no-data-state':
-						this.$panelContainer.css('background-color', this.panel.colors.disable);break;
-					default:
-						this.$panelContainer.css('background-color', okColor);break;
+
+				if (this.panelState === 'disabled-state' || this.panelState == 'no-data-state') {
+					this.$panelContainer.css('background-color', this.panel.colors.disable);
+				} else if (this.panelState === 'ok-state') {
+					this.$panelContainer.css('background-color', okColor);
+				} else if (this.panelState === 'error-state') {
+					this.$panelContainer.css('background-color', this.panel.colors.error);
+				} else {
+					this.$panelContainer.css('background-color', this.getColorByThresholdName(this.panelState));
 				}
 			} else {
 				this.$panelContainer.css('background-color', '');
 			}
+		}
+	}, {
+		key: "getColorByThresholdName",
+		value: function getColorByThresholdName(thresholdName) {
+			var _iteratorNormalCompletion10 = true;
+			var _didIteratorError10 = false;
+			var _iteratorError10 = undefined;
+
+			try {
+				for (var _iterator10 = this.panel.thresholds[Symbol.iterator](), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
+					var threshold = _step10.value;
+
+					if (thresholdName === threshold.name) {
+						return threshold.color;
+					}
+				}
+			} catch (err) {
+				_didIteratorError10 = true;
+				_iteratorError10 = err;
+			} finally {
+				try {
+					if (!_iteratorNormalCompletion10 && _iterator10.return) {
+						_iterator10.return();
+					}
+				} finally {
+					if (_didIteratorError10) {
+						throw _iteratorError10;
+					}
+				}
+			}
+
+			return '';
 		}
 	}, {
 		key: "handleMaxAlertsToShow",
@@ -1004,6 +1435,62 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 			}
 		}
 	}, {
+		key: "parseThresholds",
+		value: function parseThresholds(metricOptions) {
+			var res = [];
+
+			var _iteratorNormalCompletion11 = true;
+			var _didIteratorError11 = false;
+			var _iteratorError11 = undefined;
+
+			try {
+				for (var _iterator11 = metricOptions.thresholds[Symbol.iterator](), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
+					var threshold = _step11.value;
+
+
+					// Skip inactive thresholds
+					if (threshold.value == null) {
+						continue;
+					}
+
+					var parsedThreshold = {};
+
+					for (var key in threshold) {
+						parsedThreshold[key] = threshold[key];
+					}
+
+					if (StatusPluginCtrl.isFloat(parsedThreshold.value)) {
+						parsedThreshold.parsedValue = parseFloat(parsedThreshold.value);
+						parsedThreshold.isNumber = true;
+					} else if (parsedThreshold.value instanceof Date) {
+						// Convert Dates to Numbers and leverage existing threshold logic
+						parsedThreshold.parsedValue = parsedThreshold.value.valueOf();
+						parsedThreshold.isNumber = true;
+					} else {
+						parsedThreshold.parsedValue = parsedThreshold.value;
+						parsedThreshold.isNumber = false;
+					}
+
+					res.push(parsedThreshold);
+				}
+			} catch (err) {
+				_didIteratorError11 = true;
+				_iteratorError11 = err;
+			} finally {
+				try {
+					if (!_iteratorNormalCompletion11 && _iterator11.return) {
+						_iterator11.return();
+					}
+				} finally {
+					if (_didIteratorError11) {
+						throw _iteratorError11;
+					}
+				}
+			}
+
+			return res;
+		}
+	}, {
 		key: "onDataReceived",
 		value: function onDataReceived(dataList) {
 			this.series = dataList.map(StatusPluginCtrl.seriesHandler.bind(this));
@@ -1015,9 +1502,8 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 			this.error = [];
 			this.crit = [];
 			this.warn = [];
-			this.groupError = {};
-			this.groupCrit = {};
-			this.groupWarn = {};
+			this.groupTriggeredThresholds = {};
+			this.maxGroupTriggeredThresholds = {};
 		}
 	}, {
 		key: "$onDestroy",
@@ -1042,16 +1528,11 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 		}
 	}, {
 		key: "getThresholdIcon",
-		value: function getThresholdIcon(target) {
-			if (target.warn_icon) {
-				return target.warn_icon;
-			} else if (target.crit_icon) {
-				return target.crit_icon;
-			} else if (target.error_icon) {
-				return target.error_icon;
-			} else {
-				return null;
+		value: function getThresholdIcon(triggeredThreshold) {
+			if (triggeredThreshold) {
+				return triggeredThreshold.icon || "";
 			}
+			return "";
 		}
 	}, {
 		key: "link",
@@ -1088,48 +1569,78 @@ var StatusPluginCtrl = exports.StatusPluginCtrl = function (_MetricsPanelCtrl) {
 	}, {
 		key: "formatAlias",
 		value: function formatAlias(text, count, status) {
+			console.error("formatAlias", text, count, status);
 			return text.replace('{c}', count).replace('{s}', status);
 		}
-	}], [{
-		key: "parseThresholds",
-		value: function parseThresholds(metricOptions) {
-			var res = {};
-			if (StatusPluginCtrl.isFloat(metricOptions.warn)) {
-				res.warn = parseFloat(metricOptions.warn);
-				res.warnIsNumber = true;
-			} else if (metricOptions.warn instanceof Date) {
-				// Convert Dates to Numbers and leverage existing threshold logic
-				res.warn = metricOptions.warn.valueOf();
-				res.warnIsNumber = true;
-			} else {
-				res.warn = metricOptions.warn;
-				res.warnIsNumber = false;
+	}, {
+		key: "groupTriggeredStatusesByThresholds",
+		value: function groupTriggeredStatusesByThresholds(triggeredStatuses) {
+			var grouped = {};
+			var _iteratorNormalCompletion12 = true;
+			var _didIteratorError12 = false;
+			var _iteratorError12 = undefined;
+
+			try {
+				for (var _iterator12 = triggeredStatuses[Symbol.iterator](), _step12; !(_iteratorNormalCompletion12 = (_step12 = _iterator12.next()).done); _iteratorNormalCompletion12 = true) {
+					var status = _step12.value;
+
+					if (grouped.hasOwnProperty(status.triggeredThreshold.name)) {
+						grouped[status.triggeredThreshold.name].push(status);
+					} else {
+						grouped[status.triggeredThreshold.name] = [status];
+					}
+				}
+			} catch (err) {
+				_didIteratorError12 = true;
+				_iteratorError12 = err;
+			} finally {
+				try {
+					if (!_iteratorNormalCompletion12 && _iterator12.return) {
+						_iterator12.return();
+					}
+				} finally {
+					if (_didIteratorError12) {
+						throw _iteratorError12;
+					}
+				}
 			}
 
-			if (StatusPluginCtrl.isFloat(metricOptions.crit)) {
-				res.crit = parseFloat(metricOptions.crit);
-				res.critIsNumber = true;
-			} else if (metricOptions.crit instanceof Date) {
-				res.crit = metricOptions.crit.valueOf();
-				res.critIsNumber = true;
-			} else {
-				res.crit = metricOptions.crit;
-				res.critIsNumber = false;
-			}
-			if (StatusPluginCtrl.isFloat(metricOptions.error)) {
-				res.error = parseFloat(metricOptions.error);
-				res.errorIsNumber = true;
-			} else if (metricOptions.error instanceof Date) {
-				res.error = metricOptions.error.valueOf();
-				res.errorIsNumber = true;
-			} else {
-				res.error = metricOptions.error;
-				res.errorIsNumber = false;
-			}
-
-			return res;
+			return grouped;
 		}
 	}, {
+		key: "getFirstNotNullIcon",
+		value: function getFirstNotNullIcon(series, defaultValue) {
+			var _iteratorNormalCompletion13 = true;
+			var _didIteratorError13 = false;
+			var _iteratorError13 = undefined;
+
+			try {
+				for (var _iterator13 = series[Symbol.iterator](), _step13; !(_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done); _iteratorNormalCompletion13 = true) {
+					var el = _step13.value;
+
+					var icon = this.getThresholdIcon(el.triggeredThreshold);
+					if (icon != '' & icon != null) {
+						return icon;
+					}
+				}
+			} catch (err) {
+				_didIteratorError13 = true;
+				_iteratorError13 = err;
+			} finally {
+				try {
+					if (!_iteratorNormalCompletion13 && _iterator13.return) {
+						_iterator13.return();
+					}
+				} finally {
+					if (_didIteratorError13) {
+						throw _iteratorError13;
+					}
+				}
+			}
+
+			return defaultValue;
+		}
+	}], [{
 		key: "isFloat",
 		value: function isFloat(val) {
 			if (!isNaN(val) && val.toString().toLowerCase().indexOf('e') == -1) {
@@ -1248,7 +1759,7 @@ if(false) {
 
 exports = module.exports = __webpack_require__(10)(false);
 // Module
-exports.push([module.i, ".status-panel {\n\toverflow: hidden;\n\tposition: relative;\n\twidth: 100%;\n\theight: 100%;\n\t/*text-align: center;*/\n\twidth: -moz-fit-content;\n\ttext-align: left;\n\tmargin-left: auto;\n\tmargin-right: auto;\n  }\n  .status-panel h1 {\n\tfont-size: 1.5rem;\n  }\n  .status-panel .st-card-front {\n\tposition: absolute;\n\twidth: 100%;\n\theight: 100%;\n\tdisplay: flex;\n\tflex-direction: column;\n\tjustify-content: center;\n\talign-content: center;\n  }\n  .status-panel .st-card-back {\n\tposition: relative;\n\tdisplay: flex;\n\tjustify-content: space-between;\n\tflex-direction: column;\n  }\n  .status-panel .st-card-back .top_section .status-panel-annotation_row {\n\ttext-align: left;\n\tfont-size: 0.85rem;\n  }\n  .status-panel .st-card-back .top_section .status-panel-annotation_row .row-overflow {\n\tmax-width: 150px;\n\toverflow: hidden;\n\ttext-overflow: ellipsis;\n\twhite-space: nowrap;\n  }\n  .status-panel .st-card-back .bottom_section {\n\tdisplay: flex;\n\tflex-direction: column;\n\tjustify-content: center;\n\talign-content: center;\n  }\n  .status-panel .st-card-back .bottom_section .status_alerts_row {\n\tmin-height: 1px;\n  }\n  .status-panel .st-card-back .bottom_section .status_alerts_row .status_extra_alerts {\n\tpadding-top: 2px;\n\tfont-size: 0.85rem;\n  }\n  .status-panel .st-card-back .center_content_hidden_section {\n\tmin-height: 1px;\n  }\n  .status-panel .st-card-front,\n  .status-panel .st-card-back {\n\tbackface-visibility: hidden;\n\ttransition: transform 0.5s;\n  }\n  \n  .marquee_container {\n\toverflow: hidden;\n  }\n  .marquee_container .marquee_element {\n\tbackface-visibility: hidden;\n\ttransition: transform 0.5s;\n\tdisplay: inline-block;\n\tanimation: marquee_container 15s linear infinite;\n  }\n  .marquee_container .marquee_element:hover {\n\tanimation-play-state: paused;\n  }\n  \n  /* Make it move */\n  @keyframes marquee_container {\n\t0% {\n\t  transform: translate(0, 100%);\n\t}\n\t100% {\n\t  transform: translate(0, -100%);\n\t}\n  }\n  .st-card-front .ok-text, .st-card-front .warning-text, .st-card-front .fail-text, .st-card-front .no-data-text, .st-card-front .disabled-text {\n\tdisplay: none;\n\tfont-size: 2rem;\n  }\n  \n  .ok-state .ok-text {\n\tdisplay: block;\n  }\n  \n  .warn-state .warning-text {\n\tdisplay: block;\n  }\n  \n  .error-state .fail-text {\n\tdisplay: block;\n  }\n  \n  .no-data-state .no-data-text {\n\tdisplay: block;\n  }\n  \n  .disabled-state .disabled-text {\n\tdisplay: block;\n  }\n  \n  .st-card.effect-hover .st-card-back {\n\t-webkit-transform: rotateY(-180deg);\n\ttransform: rotateY(-180deg);\n  }\n  \n  .st-card.effect-hover:hover .st-card-front, .st-card.effect-hover.flipped .st-card-front {\n\t-webkit-transform: rotateY(-180deg);\n\ttransform: rotateY(-180deg);\n  }\n  \n  .st-card.effect-hover:hover .st-card-back, .st-card.effect-hover.flipped .st-card-back {\n\t-webkit-transform: rotateY(0);\n\ttransform: rotateY(0);\n  }\n  \n  .st-card:not(.effect-hover) .st-card-front {\n\tdisplay: none;\n  }\n  \n  .boldAlertMetric {\n\tfont-weight: bold;\n  }\n  \n  .italicAlertMetric {\n\tfont-style: italic;\n  }\n  \n  .example-container {\n\theight: auto;\n\twidth: auto;\n\toverflow: auto;\n  }\n  \n  table {\n\twidth: auto;\n\tborder: 1px solid #080808;\n\tborder-collapse: collapse !important;\n  }\n  \n  td.icon {\n  /*  width: 21px;\n\twidth: fit-content;*/\n\twidth: auto;\n\tborder-right: 1px solid #080808;\n\tpadding: 5px;\n  }\n  \n  td.name {\n\twidth: 200px !important;\n\t/*width: fit-content;*/\n\tborder-right: 1px solid #080808;\n\tpadding: 5px;\n  }\n  \n  td.value {\n\twidth: 150px;\n\tpadding: 5px;\n  }\n  \n  td.mat-column-star {\n\twidth: 20px;\n\tpadding-right: 8px;\n  }\n  \n  th.mat-column-position, td.mat-column-position {\n\tpadding-left: 8px;\n  }\n  \n  img.icon {\n\twidth: 21px;\n\theight: 21px;\n  }\n\n\n  .shift-threshold-button {\n\tmargin-left: 10px;\n\tfont-weight: 600;\n\tfont-size: 16px;\n\tcursor: pointer;\n  }", ""]);
+exports.push([module.i, ".status-panel {\n\toverflow: hidden;\n\tposition: relative;\n\twidth: 100%;\n\theight: 100%;\n\t/*text-align: center;*/\n\twidth: -moz-fit-content;\n\ttext-align: left;\n\tmargin-left: auto;\n\tmargin-right: auto;\n  }\n  .status-panel h1 {\n\tfont-size: 1.5rem;\n  }\n  .status-panel .st-card-front {\n\tposition: absolute;\n\twidth: 100%;\n\theight: 100%;\n\tdisplay: flex;\n\tflex-direction: column;\n\tjustify-content: center;\n\talign-content: center;\n  }\n  .status-panel .st-card-back {\n\tposition: relative;\n\tdisplay: flex;\n\tjustify-content: space-between;\n\tflex-direction: column;\n  }\n  .status-panel .st-card-back .top_section .status-panel-annotation_row {\n\ttext-align: left;\n\tfont-size: 0.85rem;\n  }\n  .status-panel .st-card-back .top_section .status-panel-annotation_row .row-overflow {\n\tmax-width: 150px;\n\toverflow: hidden;\n\ttext-overflow: ellipsis;\n\twhite-space: nowrap;\n  }\n  .status-panel .st-card-back .bottom_section {\n\tdisplay: flex;\n\tflex-direction: column;\n\tjustify-content: center;\n\talign-content: center;\n  }\n  .status-panel .st-card-back .bottom_section .status_alerts_row {\n\tmin-height: 1px;\n  }\n  .status-panel .st-card-back .bottom_section .status_alerts_row .status_extra_alerts {\n\tpadding-top: 2px;\n\tfont-size: 0.85rem;\n  }\n  .status-panel .st-card-back .center_content_hidden_section {\n\tmin-height: 1px;\n  }\n  .status-panel .st-card-front,\n  .status-panel .st-card-back {\n\tbackface-visibility: hidden;\n\ttransition: transform 0.5s;\n  }\n  \n  .marquee_container {\n\toverflow: hidden;\n  }\n  .marquee_container .marquee_element {\n\tbackface-visibility: hidden;\n\ttransition: transform 0.5s;\n\tdisplay: inline-block;\n\tanimation: marquee_container 15s linear infinite;\n  }\n  .marquee_container .marquee_element:hover {\n\tanimation-play-state: paused;\n  }\n  \n  /* Make it move */\n  @keyframes marquee_container {\n\t0% {\n\t  transform: translate(0, 100%);\n\t}\n\t100% {\n\t  transform: translate(0, -100%);\n\t}\n  }\n  .st-card-front .ok-text, .st-card-front .warning-text, .st-card-front .fail-text, .st-card-front .no-data-text, .st-card-front .disabled-text {\n\tdisplay: none;\n\tfont-size: 2rem;\n  }\n  \n  .ok-state .ok-text {\n\tdisplay: block;\n  }\n  \n  .warn-state .warning-text {\n\tdisplay: block;\n  }\n  \n  .error-state .fail-text {\n\tdisplay: block;\n  }\n  \n  .no-data-state .no-data-text {\n\tdisplay: block;\n  }\n  \n  .disabled-state .disabled-text {\n\tdisplay: block;\n  }\n  \n  .st-card.effect-hover .st-card-back {\n\t-webkit-transform: rotateY(-180deg);\n\ttransform: rotateY(-180deg);\n  }\n  \n  .st-card.effect-hover:hover .st-card-front, .st-card.effect-hover.flipped .st-card-front {\n\t-webkit-transform: rotateY(-180deg);\n\ttransform: rotateY(-180deg);\n  }\n  \n  .st-card.effect-hover:hover .st-card-back, .st-card.effect-hover.flipped .st-card-back {\n\t-webkit-transform: rotateY(0);\n\ttransform: rotateY(0);\n  }\n  \n  .st-card:not(.effect-hover) .st-card-front {\n\tdisplay: none;\n  }\n  \n  .boldAlertMetric {\n\tfont-weight: bold;\n  }\n  \n  .italicAlertMetric {\n\tfont-style: italic;\n  }\n  \n  .example-container {\n\theight: auto;\n\twidth: auto;\n\toverflow: auto;\n  }\n  \n  table {\n\twidth: auto;\n\tborder: 1px solid #080808;\n\tborder-collapse: collapse !important;\n  }\n  \n  td.icon {\n  /*  width: 21px;\n\twidth: fit-content;*/\n\twidth: auto;\n\tborder-right: 1px solid #080808;\n\tpadding: 5px;\n  }\n  \n  td.name {\n\twidth: 200px !important;\n\t/*width: fit-content;*/\n\tborder-right: 1px solid #080808;\n\tpadding: 5px;\n  }\n  \n  td.value {\n\twidth: 150px;\n\tpadding: 5px;\n  }\n  \n  td.mat-column-star {\n\twidth: 20px;\n\tpadding-right: 8px;\n  }\n  \n  th.mat-column-position, td.mat-column-position {\n\tpadding-left: 8px;\n  }\n  \n  img.icon {\n\twidth: 21px;\n\theight: 21px;\n  }\n\n\n  .shift-threshold-button {\n\tmargin-left: 10px;\n\tfont-weight: 600;\n\tfont-size: 16px;\n\tcursor: pointer;\n  }\n\n  .error-message {\n\t  color: red;\n\t  padding: 5px;\n  }", ""]);
 
 
 /***/ }),

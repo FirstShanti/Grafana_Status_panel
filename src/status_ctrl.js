@@ -61,10 +61,7 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 		this.aggregations = ['Last', 'First', 'Max', 'Min', 'Sum', 'Avg', 'Delta'];
 		this.displayTypes = ['Regular', 'Annotation'];
 		this.displayAliasTypes = ['If not OK', 'Always'];
-		this.displayValueTypes = [
-			{label: 'Never', index: -2}, {label: 'When Alias Displayed', index: -1}, 
-			...this.getDisplayValueOptions()
-		];
+		this.displayValueTypes = this.getDisplayValueOptions();
 		this.displayTags = ['+/-', 'UP/DOWN', 'TRENDING/FALLING'];
 		this.displayTagsType = ['Line', 'Metric'];
 		this.colorModes = ['Panel', 'Metric', 'Disabled'];
@@ -72,6 +69,12 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 		this.statusMetrics = [];
 		this.panelShapes = ['Rectangle', 'Ellipse', 'Circle'];
 		this.panelFormat = ['Default', 'Tabular'];
+
+		this.ASCENDING_ORDER = "ASC"
+		this.DESCENDING_ORDER = "DESC"
+
+		this.DEFAULT_ERROR_STATUS_ICON = 'https://hds.static.autodesk.com/admin/img/icon_error.gif';
+		this.DEFAULT_OR_STATUS_ICON = 'https://hds.static.autodesk.com/images/table-status-good.svg';
 
 		this.newThresholdName = null;
 
@@ -103,22 +106,29 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 
 		this.onColorChange = this.onColorChange.bind(this);
 
-		this.statusError = [];
-		this.statusCrit = [];
-		this.statusWarn = [];
+		this.triggeredStatuses = [];
+		this.maxGroupTriggeredThresholds = {}
 		this.statusMetric = null;
 
-		// FIND ME!
-		this.status = [];
+		this.addFilters();
+		this.updateMeasurementsThresholds();
 
-		this.addFilters()
+		for (let measurement of this.panel.targets) {
+			this.validateThresholdValues(measurement);
+			if (measurement.thresholdsOrder == null) {
+				measurement.thresholdsOrder = this.ASCENDING_ORDER;
+			}
+		}
 	}
 
 	getDisplayValueOptions() {
-		return this.panel.thresholds.map((el, i) => ({
+		return [
+			{label: 'Never', name: "__never__"},
+			{label: 'When Alias Displayed', name: "__When_Alias_Displayed__"}, 
+			...this.panel.thresholds.map((el, i) => ({
 			label: el.name + " and higher",
-			index: i
-		}));
+			name: el.name
+		}))];
 	}
 
 	addFilters() {
@@ -177,6 +187,7 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 
 		this.measurements = this.panel.targets;
 		console.log("measurements", [...this.measurements]);
+		this.updateMeasurementsThresholds();
 
 		/** Duplicate alias validation **/
 		this.duplicates = false;
@@ -213,6 +224,7 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 		if(this.panel.title.length === 0) {
 			panelHeaderHeight = '10px';
 		}
+		console.log("his.$panelContainer", this.$panelContainer);
 		this.$panelContainer.find('.panel-header').css('height', panelHeaderHeight);
 		this.$panelContainer.find('.panel-menu-container').css('height', panelHeaderHeight);
 		this.$panelContainer.find('.fa-caret-down').css('display', 'none');
@@ -264,7 +276,6 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 	}
 
 	onColorChange(item) {
-		// useless?
 		return (color) => {
 			this.panel.colors[item] = color;
 			this.render();
@@ -277,6 +288,14 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 			return;
 		}
 
+		// Validate name are unique.
+		for (let threshold in this.panel.thresholds){
+			if (threshold.name == this.newThresholdName) {
+				alert("This name already exists.");
+				return
+			}
+		}
+
 		this.panel.thresholds.push({
 			name: this.newThresholdName,
 			order: this.panel.thresholds.length,
@@ -284,11 +303,56 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 		});
 
 		this.newThresholdName = null;
+		this.updateMeasurementsThresholds();
+		this.displayValueTypes = this.getDisplayValueOptions();
+	}
+
+	updateMeasurementsThresholds() {
+
+		console.log("updateMeasurementsThresholds");
+
+		for (let measurement of this.panel.targets) {
+			if (!measurement.thresholds) {
+				measurement.thresholds = [];
+			}
+
+			let measurementsThresholdsMapping = measurement.thresholds.reduce((a,x) => {
+				a[x.name] = x;
+				return a;
+			}, {});
+
+			let newMeasurementThresholds = [];
+
+			for (let threshold of this.panel.thresholds) {
+
+				let previousThresholdValues = measurementsThresholdsMapping[threshold.name] || {};
+
+				newMeasurementThresholds.push({
+					name: threshold.name,
+					order: threshold.order,
+					value: previousThresholdValues.value || null,
+					tags: previousThresholdValues.tags || null,
+					tags_type: previousThresholdValues.tags_type || null,
+					icon: previousThresholdValues.icon || null,
+				});
+			}
+
+			measurement.thresholds = newMeasurementThresholds;
+			this.validateThresholdValues(measurement);
+		}
 	}
 
 	onRemoveThreshold(thresholdToDelete) {
 		this.panel.thresholds = this.panel.thresholds.filter(a => a !== thresholdToDelete);
 		this.panel.thresholds.forEach((el, index) => el.order = index);
+		this.updateMeasurementsThresholds();
+		for (let measurement of this.panel.targets){
+			if (measurement.displayValueWithAlias == thresholdToDelete.name) {
+				let index = Math.min(thresholdToDelete.order, this.panel.thresholds.length - 1);
+				measurement.displayValueWithAlias = (this.panel.thresholds[index] || this.displayValueTypes[1]).name;
+			}
+		}
+		this.displayValueTypes = this.getDisplayValueOptions();
 	}
 
 	shiftThresholdOrder(currentOrder, shift) {
@@ -301,6 +365,8 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 		this.panel.thresholds[currentOrder].order = newOrder;
 
 		this.panel.thresholds = this.panel.thresholds.sort((a, b) => a.order - b.order);
+		this.updateMeasurementsThresholds();
+		this.displayValueTypes = this.getDisplayValueOptions();
 	}
 
 	onSetThresholdColor(threshold) {
@@ -337,26 +403,24 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 		this.error = [];
 		this.crit = [];
 		this.warn = [];
-		this.status = [];
-		this.statusError = [];
-		this.statusCrit = [];
-		this.statusWarn = [];
+		this.triggeredStatuses = [];
+		this.groupedTriggeredStatuses = {};
 		this.disabled = [];
 		this.display = [];
 		this.annotation = [];
 		this.extraMoreAlerts = null;
 
 		this.statusMetrics = [];
-		this.groupError = {};
-		this.groupCrit = {};
-		this.groupWarn = {};
+
+		this.maxGroupTriggeredThresholds = {};
+		this.groupTriggeredThresholds = {};
 
 		if(this.panel.statusGroups){
 			var statusGroupExists = false;
 			this.panel.statusGroups.forEach(element => {
-				this.groupError[element.name] = [];
-				this.groupCrit[element.name] = [];
-				this.groupWarn[element.name] = [];
+
+				this.groupTriggeredThresholds[element.name] = [];
+
 				if(element.name === 'Status Checks'){
 					statusGroupExists = true;
 				}
@@ -365,6 +429,8 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 				this.panel.statusGroups.unshift({name: 'Status Checks', alias: '', url: ''})
 			}
 		}
+
+		console.log("Series", this.series);
 
 		_.each(this.series, (s) => {
 			let target = _.find(targets, (target) => {
@@ -436,6 +502,10 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 				this.handleTextOnly(s, target);
 			}
 
+			console.log("diplay", this.display);
+			console.log("annotation", this.annotation);
+			console.log("groupTriggeredThresholds", this.groupTriggeredThresholds);
+
 			// this.statusMetrics.push(s.alias)
 		});
 
@@ -443,9 +513,8 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 			this.error = [];
 			this.crit = [];
 			this.warn = [];
-			this.groupError = {};
-			this.groupCrit = {};
-			this.groupWarn = {};
+			this.groupTriggeredThresholds = {};
+			this.maxGroupTriggeredThresholds = {};
 			this.display = [];
 		}
 
@@ -508,121 +577,236 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 		});
 	}
 
-	handleThresholdStatus(series, target) {
-		series.thresholds = StatusPluginCtrl.parseThresholds(target);
-		series.inverted = (series.thresholds.error < series.thresholds.crit) && (series.thresholds.crit < series.thresholds.warn);
+	validateThresholdValues(measurement) {
+		// !All thresholds should be sorted in ascending order by threshold.order field.
+		console.log("validateThresholdValues");
 
-		let isError = false;
-		let isCritical = false;
-		let isWarning = false;
+		measurement.isThresholdValuesValid = true;
+
+		if (measurement.thresholds.length < 3) {
+			return // There is no sense to validate if values situated in the right order if there is 0, 1 or 2 elements. Order can be Asc and Desc
+		}
+
+		const activeThresholds = measurement.thresholds.filter(el => el.value != null); // check that value is passed
+
+		if (activeThresholds.length < 2) {
+			return
+		} 
+
+		for (let i = 0; i < activeThresholds.length - 1; i++) {
+
+			if (measurement.thresholdsOrder === this.ASCENDING_ORDER && activeThresholds[i].value >= activeThresholds[i+1].value) {
+				measurement.isThresholdValuesValid = false;
+				return
+			}
+
+			if (measurement.thresholdsOrder === this.DESCENDING_ORDER && activeThresholds[i].value <= activeThresholds[i+1].value) {
+				measurement.isThresholdValuesValid = false;
+				return
+			}
+		}
+
+		if (this.$panelContainer) {
+			this.onRender();  // render if inited
+		}
+	}
+
+
+	getColor(threshold) {
+		if (!threshold) {
+			return '#000';
+		}
+
+		return this.getColorByThresholdName(threshold.name);
+	}
+
+	handleThresholdStatus(series, target) {
+		series.thresholds = this.parseThresholds(target);
+		series.thresholdsOrder = target.thresholdsOrder
+
+		if (!target.isThresholdValuesValid) {
+			console.error("Thresholds are invalid. Ignoring them.");
+			return
+		}
+
+		let triggeredThreshold = null;
 		
 		let isStatus = false;
-		let isCheckRanges = series.thresholds.errorIsNumber && series.thresholds.warnIsNumber && series.thresholds.critIsNumber;
+		let isCheckRanges = series.thresholds.map(el => el.isNumber).every(el => el === true);
 
 		if (series.hasOwnProperty('group') && series.group === this.panel.statusGroups[0]){
 			isStatus = true;
-			// this.statusMetrics.push(series);
 		}
 
 		if (isCheckRanges) {
-			if (!series.inverted) {
-				if (series.display_value >= series.thresholds.error) {
-					isError = true
-				} else if (series.display_value >= series.thresholds.crit  && series.alias) {
-					isCritical = true
-				} else if (series.display_value >= series.thresholds.warn) {
-					isWarning = true
+			console.log("isCheckRanges");
+			if (series.thresholdsOrder === this.ASCENDING_ORDER) { 
+
+				for (const threshold of series.thresholds) {
+					console.log("series.display_value >= threshold.parsedValue", series.display_value, threshold.parsedValue);
+					if (series.display_value >= threshold.parsedValue) {
+						triggeredThreshold = threshold;
+						// break;
+					}
 				}
-			} else {
-				if (series.display_value <= series.thresholds.error) {
-					isError = true
-				} else if (series.display_value <= series.thresholds.crit && series.alias) {
-					isCritical = true
-				} else if (series.display_value <= series.thresholds.warn) {
-					isWarning = true
+
+			} else if (series.thresholdsOrder === this.DESCENDING_ORDER) {
+
+				for (const threshold of series.thresholds) {
+					if (series.display_value <= threshold.parsedValue) {
+						console.log("series.display_value <= threshold.parsedValue", series.display_value, threshold.parsedValue);
+						triggeredThreshold = threshold;
+						// break;
+					}
 				}
+
 			}
+
 		} else {
-			if (series.display_value == series.thresholds.error) {
-				isError = true
-			} else if (series.display_value == series.thresholds.crit && series.alias) {
-				isCritical = true
-			} else if (series.display_value == series.thresholds.warn) {
-				isWarning = true
+			console.log("is NOT CheckRanges");
+			for (const threshold of series.thresholds) {
+				if (series.display_value == threshold.parsedValue) {
+					triggeredThreshold = threshold;
+					break;
+				}
 			}
+
 		}
 
 		// Add units-of-measure and decimal formatting or date formatting as needed
 		series.display_value = this.formatDisplayValue(series.display_value, target);
-		series.display_icon = this.getThresholdIcon(target);
+		series.display_icon = this.getThresholdIcon(triggeredThreshold);
+		series.color = this.getColor(triggeredThreshold);
 
-		[series.error_tag, series.error_tags, series.error_tags_type] = this.getTag(series.display_value, target.error_tags, target.error_tags_type);
-		[series.crit_tag, series.crit_tags, series.crit_tags_type] = this.getTag(series.display_value, target.crit_tags, target.crit_tags_type);
-		[series.warn_tag, series.warn_tags, series.warn_tags_type] = this.getTag(series.display_value, target.warn_tags, target.warn_tags_type);
+		[series.tag, series.tags, series.tags_type] = this.getTag(series.display_value, triggeredThreshold);
+		series.triggeredThreshold = triggeredThreshold;
+		let displayAlias = false;
 
+		if (target.displayAliasType === "Always") {
+			displayAlias = true;
+		} else if (target.displayAliasType === "If not OK" && triggeredThreshold) {
+			displayAlias = true;
+		}
 
-		var displayValueWhenAliasDisplayed = 'When Alias Displayed' === target.displayValueWithAlias;
-		var displayValueFromWarning = 'If not OK' === target.displayValueWithAlias;
-		var displayValueFromCritical = 'Critical Only' === target.displayValueWithAlias;
-		var displayValueFromError = 'Error Only' === target.displayValueWithAlias;
+		let displayValue = false;
+		
+		if (target.displayValueWithAlias === '__When_Alias_Displayed__' && displayAlias) {
+			displayValue = true;
+		} else if (target.displayValueWithAlias === '__never__') {
+			displayValue = false;
+		} else if (triggeredThreshold) {
+			let thresholdToDisplayValue = this.panel.thresholds.find(el => el.name == target.displayValueWithAlias);
+			if (!thresholdToDisplayValue) {
+				displayValue = false;
+				console.error("thresholdToDisplayValue is empty! Error with thresholds.");
+			}
+			if (triggeredThreshold.order >= thresholdToDisplayValue.order) {
+				displayValue = true;
+			}	
+		}
 
-		if (isError) {
-			series.displayType = this.displayTypes[0];
-			series.isDisplayValue = displayValueWhenAliasDisplayed || displayValueFromError || displayValueFromWarning;
-			if (isStatus) {
-				this.statusError.push(series);
-			} else {
-				this.error.push(series);
-				if (series.hasOwnProperty('group')) {
-					this.groupError[series.group.name].push(series);
-				}
-			}
-		} else if(isCritical) {
-			//In critical state we don't show the error as annotation
-			series.displayType = this.displayTypes[0];
-			series.isDisplayValue = displayValueWhenAliasDisplayed || displayValueFromWarning || displayValueFromCritical;
-			if(isStatus) {
-				this.statusCrit.push(series);
-			}
-			else {
-				this.crit.push(series);
-				if(series.hasOwnProperty('group')) {
-					this.groupCrit[series.group.name].push(series);
-				}
-			}
-		} else if(isWarning) {
-			//In warning state we don't show the warning as annotation
-			series.displayType = this.displayTypes[0];
-			series.isDisplayValue = displayValueWhenAliasDisplayed || displayValueFromWarning;
-			if(isStatus){
-				this.statusWarn.push(series);
-			}
-			else{
-				this.warn.push(series);
-				if(series.hasOwnProperty('group')) {
-					this.groupWarn[series.group.name].push(series);
-				}
-			}
-		} else if ("Always" == target.displayAliasType) {
-			series.isDisplayValue = displayValueWhenAliasDisplayed;
-			if(series.displayType == "Annotation") {
+		series.isDisplayValue = displayValue;
+
+		console.log("displayAlias", displayAlias);
+		console.log("triggeredThreshold", triggeredThreshold);
+
+		if (displayAlias && !triggeredThreshold) {  // If OK state
+			if (series.displayType === "Annotation") {
 				this.annotation.push(series);
-			} 
-			else {
+			} else {
 				this.display.push(series);
 			}
-		} else if(isStatus){
+		} else if (triggeredThreshold) {
+			//In not OK state we don't show the error as annotation
+			series.displayType = this.displayTypes[0];
+
+			if (isStatus) {
+				this.triggeredStatuses.push(series);
+			} else {
+				// this.error.push(series);
+				if (series.hasOwnProperty('group')) {
+					this.groupTriggeredThresholds[series.group.name].push(series);
+				}
+			}
+		} else if(isStatus){  // FOR OK status
 			this.statusMetrics.push(series);
 		}
+
+
+		this.groupedTriggeredStatuses = this.groupTriggeredStatusesByThresholds(this.triggeredStatuses);
+		
+		for (let group in this.groupTriggeredThresholds) {
+			if (this.groupTriggeredThresholds[group].length > 0) {
+				this.maxGroupTriggeredThresholds[group] = this.getMetricWithGreatedOrder(this.groupTriggeredThresholds[group]);
+			}
+		}
+
+		console.log("============this.maxGroupTriggeredThresholds", this.maxGroupTriggeredThresholds);
+
+		console.log(series, target);
+
+		// if (isError) {
+		// 	series.displayType = this.displayTypes[0];
+		// 	series.isDisplayValue = displayValueWhenAliasDisplayed || displayValueFromError || displayValueFromWarning;
+		// 	if (isStatus) {
+		// 		this.statusError.push(series);
+		// 	} else {
+		// 		this.error.push(series);
+		// 		if (series.hasOwnProperty('group')) {
+		// 			this.groupError[series.group.name].push(series);
+		// 		}
+		// 	}
+		// } else if(isCritical) {
+		// 	//In critical state we don't show the error as annotation
+		// 	series.displayType = this.displayTypes[0];
+		// 	series.isDisplayValue = displayValueWhenAliasDisplayed || displayValueFromWarning || displayValueFromCritical;
+		// 	if(isStatus) {
+		// 		this.statusCrit.push(series);
+		// 	}
+		// 	else {
+		// 		this.crit.push(series);
+		// 		if(series.hasOwnProperty('group')) {
+		// 			this.groupCrit[series.group.name].push(series);
+		// 		}
+		// 	}
+		// } else if(isWarning) {
+		// 	//In warning state we don't show the warning as annotation
+		// 	series.displayType = this.displayTypes[0];
+		// 	series.isDisplayValue = displayValueWhenAliasDisplayed || displayValueFromWarning;
+		// 	if(isStatus){
+		// 		this.statusWarn.push(series);
+		// 	}
+		// 	else{
+		// 		this.warn.push(series);
+		// 		if(series.hasOwnProperty('group')) {
+		// 			this.groupWarn[series.group.name].push(series);
+		// 		}
+		// 	}
+		// } else if ("Always" == target.displayAliasType) {
+		// 	series.isDisplayValue = displayValueWhenAliasDisplayed;
+		// 	if(series.displayType == "Annotation") {
+		// 		this.annotation.push(series);
+		// 	} 
+		// 	else {
+		// 		this.display.push(series);
+		// 	}
+		// } else if(isStatus){
+		// 	this.statusMetrics.push(series);
+		// }
 	}
 
-	getTag(value, displayTags, displayTagsType) {
-		if (displayTags === '+/-') {
-			return [value > 0 ? '+':'-', displayTags, displayTagsType]
-		} else if (displayTags === 'UP/DOWN') {
-			return [value > 0 ? 'UP':'DOWN' , displayTags, displayTagsType]
-		} else if (displayTags === 'TRENDING/FALLING') {
-			return [value > 0 ? 'TRENDING':'FALLING', displayTags, displayTagsType]
+	getTag(value, triggeredThreshold) {
+
+		if (!triggeredThreshold) {
+			return [null, null, null];
+		}
+
+		if (triggeredThreshold.tags === '+/-') {
+			return [value > 0 ? '+':'-', triggeredThreshold.tags, triggeredThreshold.tags_type]
+		} else if (triggeredThreshold.tags === 'UP/DOWN') {
+			return [value > 0 ? 'UP':'DOWN' , triggeredThreshold.tags, triggeredThreshold.tags_type]
+		} else if (triggeredThreshold.tags === 'TRENDING/FALLING') {
+			return [value > 0 ? 'TRENDING':'FALLING', triggeredThreshold.tags, triggeredThreshold.tags_type]
 		} else {
 			return [null, null, null]
 		}
@@ -684,15 +868,41 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 		}
 	}
 
+	getStatusWithGreatedOrder(triggeredThresholds) {
+		let maxOrder = -1;
+		let greatestThreshold = null;
+
+		for (const series of triggeredThresholds) {
+			if (series.triggeredThreshold.order > maxOrder) {
+				maxOrder = series.triggeredThreshold.order;
+				greatestThreshold = series.triggeredThreshold;
+			}
+		}
+
+		return greatestThreshold;
+	}
+
+	getMetricWithGreatedOrder(triggeredThresholds) {
+		let maxOrder = -1;
+		let greatestMetric = null;
+
+		for (const series of triggeredThresholds) {
+			if (series.triggeredThreshold.order > maxOrder) {
+				maxOrder = series.triggeredThreshold.order;
+				greatestMetric = series;
+			}
+		}
+
+		return greatestMetric;
+	}
+
 	updatePanelState() {
 		if(this.duplicates) {
 			this.panelState = 'error-state';
 		} else if (this.disabled.length > 0) {
 			this.panelState = 'disabled-state';
-		} else if (this.statusCrit.length > 0 || this.statusError.length > 0) {
-			this.panelState = 'error-state';
-		} else if (this.statusWarn.length > 0) {
-			this.panelState = 'warn-state';
+		} else if (this.triggeredStatuses.length > 0) {
+			this.panelState = this.getStatusWithGreatedOrder(this.triggeredStatuses).name;
 		} else if((this.series == undefined || this.series.length == 0) && this.panel.isGrayOnNoData) {
 			this.panelState = 'no-data-state';
 		} else {
@@ -707,7 +917,8 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 	};
 
 	handleCssDisplay() {
-		this.$panelContainer.removeClass('error-state warn-state disabled-state ok-state no-data-state');
+		// console.log("REMOVE", 'error-state disabled-state ok-state no-data-state ' + this.panel.thresholds.map(el => el.name).join(''))
+		// this.$panelContainer.removeClass('error-state disabled-state ok-state no-data-state ' + this.panel.thresholds.map(el => el.name).join(' '));
 		this.$panelContainer.addClass(this.panelState);
 
 		var height = this.$panelContainer.find('.status-panel').height();
@@ -740,16 +951,29 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 		let okColor = (this.panel.isIgnoreOKColors) ? '' : this.panel.colors.ok;
 
 		if (this.panel.colorMode === "Panel") {
-			switch(this.panelState) {
-				case 'disabled-state': this.$panelContainer.css('background-color', this.panel.colors.disable); break;
-				case 'error-state': this.$panelContainer.css('background-color', this.panel.colors.crit); break;
-				case 'warn-state': this.$panelContainer.css('background-color', this.panel.colors.warn); break;
-				case 'no-data-state': this.$panelContainer.css('background-color', this.panel.colors.disable); break;
-				default: this.$panelContainer.css('background-color', okColor); break;
+
+			if (this.panelState === 'disabled-state' || this.panelState == 'no-data-state') {
+				this.$panelContainer.css('background-color', this.panel.colors.disable);
+			} else if (this.panelState === 'ok-state'){
+				this.$panelContainer.css('background-color', okColor);
+			} else if (this.panelState === 'error-state'){
+				this.$panelContainer.css('background-color', this.panel.colors.error);
+			} else {
+				this.$panelContainer.css('background-color', this.getColorByThresholdName(this.panelState));
 			}
+
 		} else {
 			this.$panelContainer.css('background-color', '');
 		}
+	}
+
+	getColorByThresholdName(thresholdName) {
+		for (const threshold of this.panel.thresholds) {
+			if (thresholdName === threshold.name) {
+				return threshold.color;
+			}
+		}
+		return '';
 	}
 
 
@@ -803,39 +1027,35 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 		}
 	}
 
-	static parseThresholds(metricOptions) {
-		let res = {};
-		if (StatusPluginCtrl.isFloat(metricOptions.warn)) {
-			res.warn = parseFloat(metricOptions.warn);
-			res.warnIsNumber = true;
-		} else if (metricOptions.warn instanceof Date) {
-			// Convert Dates to Numbers and leverage existing threshold logic
-			res.warn = metricOptions.warn.valueOf();
-			res.warnIsNumber = true;
-		} else {
-			res.warn = metricOptions.warn;
-			res.warnIsNumber = false;
-		}
+	parseThresholds(metricOptions) {
+		let res = [];
 
-		if (StatusPluginCtrl.isFloat(metricOptions.crit)) {
-			res.crit = parseFloat(metricOptions.crit);
-			res.critIsNumber = true;
-		} else if (metricOptions.crit instanceof Date) {
-			res.crit = metricOptions.crit.valueOf();
-			res.critIsNumber = true;
-		} else {
-			res.crit = metricOptions.crit;
-			res.critIsNumber = false;
-		}
-		if (StatusPluginCtrl.isFloat(metricOptions.error)) {
-			res.error = parseFloat(metricOptions.error);
-			res.errorIsNumber = true;
-		} else if (metricOptions.error instanceof Date) {
-			res.error = metricOptions.error.valueOf();
-			res.errorIsNumber = true;
-		} else {
-			res.error = metricOptions.error;
-			res.errorIsNumber = false;
+		for (let threshold of metricOptions.thresholds) {
+
+			// Skip inactive thresholds
+			if (threshold.value == null) {
+				continue;
+			}
+
+			let parsedThreshold = {}
+
+			for (let key in threshold) {
+				parsedThreshold[key] = threshold[key];
+			}
+
+			if (StatusPluginCtrl.isFloat(parsedThreshold.value)) {
+				parsedThreshold.parsedValue = parseFloat(parsedThreshold.value);
+				parsedThreshold.isNumber = true;
+			} else if (parsedThreshold.value instanceof Date) {
+				// Convert Dates to Numbers and leverage existing threshold logic
+				parsedThreshold.parsedValue = parsedThreshold.value.valueOf();
+				parsedThreshold.isNumber = true;
+			} else {
+				parsedThreshold.parsedValue = parsedThreshold.value;
+				parsedThreshold.isNumber = false;
+			}
+
+			res.push(parsedThreshold);
 		}
 
 		return res;
@@ -857,9 +1077,8 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 		this.error = [];
 		this.crit = [];
 		this.warn = [];
-		this.groupError = {};
-		this.groupCrit = {};
-		this.groupWarn = {};
+		this.groupTriggeredThresholds = {};
+		this.maxGroupTriggeredThresholds = {};
 	}
 
 	static seriesHandler(seriesData) {
@@ -890,16 +1109,11 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 		}
 	}
 
-	getThresholdIcon(target) {
-		if (target.warn_icon) {
-			return target.warn_icon
-		} else if (target.crit_icon) {
-			return target.crit_icon
-		} else if (target.error_icon){
-			return target.error_icon
-		} else {
-			return null
+	getThresholdIcon(triggeredThreshold) {
+		if (triggeredThreshold) {
+			return triggeredThreshold.icon || ""
 		}
+		return "";
 	}
 
 	link(scope, elem, attrs, ctrl) {
@@ -930,7 +1144,32 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 	}
 
 	formatAlias(text, count, status){
+		console.error("formatAlias", text, count, status);
 		return text.replace('{c}', count).replace('{s}', status);
+	}
+
+	groupTriggeredStatusesByThresholds(triggeredStatuses) {
+		let grouped = {};
+		for (let status of triggeredStatuses) {
+			if (grouped.hasOwnProperty(status.triggeredThreshold.name)) {
+				grouped[status.triggeredThreshold.name].push(status);
+			} else {
+				grouped[status.triggeredThreshold.name] = [status];
+			}
+		}
+
+		return grouped;
+	}
+
+	getFirstNotNullIcon(series, defaultValue) {
+		for (let el of series) {
+			const icon = this.getThresholdIcon(el.triggeredThreshold);
+			if (icon != '' & icon != null) {
+				return icon;
+			}
+		}
+
+		return defaultValue;
 	}
 }
 
